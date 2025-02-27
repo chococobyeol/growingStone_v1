@@ -369,6 +369,33 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
   try {
     console.log('즉시 구매 시도:', listingId);
     
+    // 먼저 리스팅 정보를 조회하여 스톤 타입 정보 확보
+    const { data: listing, error: listingError } = await supabase
+      .from('market_listings')
+      .select('stone_id')
+      .eq('id', listingId)
+      .single();
+      
+    if (listingError) {
+      console.error("리스팅 정보 조회 실패:", listingError);
+      return { success: false, message: "구매 정보를 불러올 수 없습니다." };
+    }
+    
+    // 스톤 정보 조회
+    const { data: stoneData, error: stoneError } = await supabase
+      .from('stones')
+      .select('type')
+      .eq('id', listing.stone_id)
+      .single();
+      
+    if (stoneError) {
+      console.error("스톤 정보 조회 실패:", stoneError);
+    }
+    
+    // 돌 유형 정보 저장
+    const stoneType = stoneData?.type;
+    
+    // 구매 트랜잭션 실행
     const { data, error } = await supabase.rpc('buy_now_transaction', {
       listing_id: listingId
     });
@@ -411,10 +438,36 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
           return { success: false, message: "구매 처리 중 오류가 발생했습니다." };
         }
         
+        // 성공했고 스톤 타입 정보가 있다면 도감에 기록
+        if (stoneType) {
+          try {
+            // 돌 도감에 기록 추가
+            import('$lib/stoneCatalogUtils').then(({ recordAcquiredStone }) => {
+              recordAcquiredStone(stoneType);
+            });
+          } catch (catalogError) {
+            console.error("도감 기록 추가 실패:", catalogError);
+            // 도감 기록 실패는 구매 성공에 영향을 주지 않음
+          }
+        }
+        
         return { success: true, message: "구매가 완료되었습니다." };
       }
       
       return { success: false, message: "구매 처리 중 오류가 발생했습니다." };
+    }
+    
+    // 트랜잭션 성공 시 도감에 기록 추가
+    if (stoneType) {
+      try {
+        // 돌 도감에 기록 추가 (비동기로 처리하여 구매 프로세스에 영향 없도록)
+        import('$lib/stoneCatalogUtils').then(({ recordAcquiredStone }) => {
+          recordAcquiredStone(stoneType);
+        });
+      } catch (catalogError) {
+        console.error("도감 기록 추가 실패:", catalogError);
+        // 도감 기록 실패는 구매 성공에 영향을 주지 않음
+      }
     }
     
     return data || { success: true, message: "구매가 완료되었습니다." };

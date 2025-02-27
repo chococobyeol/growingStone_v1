@@ -122,5 +122,15 @@
   "purchaseError": "구매 처리 중 오류가 발생했습니다.",
   "expired": "만료됨",
   "cancelSaleError": "판매 취소 중 오류가 발생했습니다.",
-  "loadingListingsError": "판매 목록을 불러오는데 실패했습니다."
+  "loadingListingsError": "판매 목록을 불러오는데 실패했습니다.",
+  "buyTab": "구매",
+  "sellTab": "판매",
+  "searchPlaceholder": "돌 이름이나 종류로 검색",
+  "sortByCreated": "최신순",
+  "sortByExpiry": "마감임박순",
+  "sortBySizeAsc": "크기 오름차순",
+  "sortBySizeDesc": "크기 내림차순",
+  "sortByName": "이름순",
+  "loading": "로딩 중...",
+  "noStonesAvailable": "판매 중인 돌이 없습니다."
 }

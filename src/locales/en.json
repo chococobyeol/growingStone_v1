@@ -122,5 +122,15 @@
   "purchaseError": "An error occurred during purchase.",
   "expired": "Expired",
   "cancelSaleError": "An error occurred while canceling the sale.",
-  "loadingListingsError": "Failed to load market listings."
+  "loadingListingsError": "Failed to load market listings.",
+  "buyTab": "Buy",
+  "sellTab": "Sell",
+  "searchPlaceholder": "Search by name or type",
+  "sortByCreated": "Latest",
+  "sortByExpiry": "Ending Soon",
+  "sortBySizeAsc": "Size (Low to High)",
+  "sortBySizeDesc": "Size (High to Low)",
+  "sortByName": "Name",
+  "loading": "Loading...",
+  "noStonesAvailable": "No stones available."
 }

@@ -112,7 +112,7 @@
 <div class="sell-container">
   <div class="back-button-container">
     <button class="back-button" on:click={() => goto('/market')}>
-      ← 목록으로 돌아가기
+      ← {$t('backToList')}
     </button>
   </div>
   

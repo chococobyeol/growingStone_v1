@@ -311,65 +311,57 @@
 </script>
 
 <div class="market-container">
-  <h1>{$t('stoneMarket')}</h1>
+  <h1>{$t('market')}</h1>
   
-  <div class="market-actions">
-    <button class="sell-button" on:click={() => goto('/market/sell')}>{$t('sellRegistration')}</button>
-  </div>
-  
-  <div class="tabs">
+  <!-- 탭 스위처 -->
+  <div class="tab-switcher">
     <button 
-      class={`tab ${marketTab === 'buy' ? 'active' : ''}`} 
+      class={marketTab === 'buy' ? 'tab-button active' : 'tab-button'} 
       on:click={() => switchTab('buy')}
     >
-      {$t('buy')}
+      {$t('buyTab')}
     </button>
     <button 
-      class={`tab ${marketTab === 'sell' ? 'active' : ''}`} 
+      class={marketTab === 'sell' ? 'tab-button active' : 'tab-button'} 
       on:click={() => switchTab('sell')}
     >
-      {$t('mySalesList')}
+      {$t('sellTab')}
     </button>
   </div>
   
+  <!-- Buy Tab -->
   {#if marketTab === 'buy'}
-    <!-- 검색 바를 상단으로 이동 -->
-    <div class="search-container">
-      <input 
-        type="text" 
-        placeholder={$t('searchByNameOrType')}
-        bind:value={searchQuery} 
-        on:input={handleFilterChange}
-        class="search-input"
-      />
-    </div>
-    
-    <div class="filters">
-      <!-- 정렬 옵션 -->
-      <div class="filter-group">
-        <label for="sortBy">{$t('sortBy')}</label>
-        <select id="sortBy" bind:value={selectedSortBy} on:change={handleFilterChange}>
-          <option value="created">{$t('latestFirst')}</option>
-          <option value="expiry">{$t('expiryImminent')}</option>
-          <option value="sizeAsc">{$t('sizeAscending')}</option>
-          <option value="sizeDesc">{$t('sizeDescending')}</option>
-          <option value="name">{$t('nameOrder')}</option>
+    <!-- 필터 영역 -->
+    <div class="filter-controls">
+      <div class="search-box">
+        <input 
+          type="text" 
+          bind:value={searchQuery} 
+          placeholder={$t('searchPlaceholder')} 
+          on:input={handleFilterChange}
+        />
+      </div>
+      <div class="sort-controls">
+        <select 
+          bind:value={selectedSortBy} 
+          on:change={handleFilterChange}
+        >
+          <option value="created">{$t('sortByCreated')}</option>
+          <option value="expiry">{$t('sortByExpiry')}</option>
+          <option value="sizeAsc">{$t('sortBySizeAsc')}</option>
+          <option value="sizeDesc">{$t('sortBySizeDesc')}</option>
+          <option value="name">{$t('sortByName')}</option>
         </select>
       </div>
     </div>
-    
-    <!-- 구매 탭 내용 -->
+      
+    <!-- 판매 목록 섹션 -->
     {#if loading}
-      <div class="loading">로딩 중...</div>
+      <div class="loading">{$t('loading')}</div>
     {:else if errorMsg}
       <div class="error-message">{errorMsg}</div>
     {:else if listings.length === 0}
-      <div class="empty-state">
-        {$t('noStonesOnSale')}
-        <button on:click={() => goto('/market/sell')} class="action-button">
-          {$t('sellStoneButton')}
-        </button>
-      </div>
+      <div class="empty-state">{$t('noStonesAvailable')}</div>
     {:else}
       <div class="listing-grid">
         {#each listings as listing}
@@ -385,8 +377,8 @@
             <div class="stone-info">
               <h3>{listing.stoneName}</h3>
               <p class="stone-info">
-                <span class="stone-type">{listing.stoneType}</span>
-                <span class="stone-size">크기: {listing.stoneSize.toFixed(2)}</span>
+                <span class="stone-type">{$t(`stoneTypes.${listing.stoneType}`)}</span>
+                <span class="stone-size">{$t('size')}: {listing.stoneSize.toFixed(2)}</span>
               </p>
               <div class="price-info">
                 {#if listing.buyNowPrice}
@@ -397,17 +389,13 @@
             </div>
             
             <div class="card-actions">
-              {#if currentUserId && currentUserId !== listing.seller.id}
-                {#if listing.buyNowPrice && !listing.isMyListing && listing.seller.id !== currentUserId}
-                  <button 
-                    class="buy-button"
-                    on:click={() => handleBuyNow(listing.id)}
-                    disabled={processingListingId === listing.id}
-                  >
-                    {$t('buyNow')}
-                  </button>
-                {/if}
-              {/if}
+              <button 
+                class="buy-now-button" 
+                on:click={() => handleBuyNow(listing.id)}
+                disabled={processingListingId === listing.id || listing.isMyListing}
+              >
+                {processingListingId === listing.id ? $t('processing') : $t('buyNow')}
+              </button>
             </div>
           </div>
         {/each}
@@ -416,7 +404,7 @@
   {:else}
     <!-- 판매 탭 내용 -->
     {#if loading}
-      <div class="loading">로딩 중...</div>
+      <div class="loading">{$t('loading')}</div>
     {:else if errorMsg}
       <div class="error-message">{errorMsg}</div>
     {:else if myListings.length === 0}
@@ -436,8 +424,8 @@
             <div class="stone-info">
               <h3>{listing.stoneName}</h3>
               <p class="stone-info">
-                <span class="stone-type">{listing.stoneType}</span>
-                <span class="stone-size">크기: {listing.stoneSize.toFixed(2)}</span>
+                <span class="stone-type">{$t(`stoneTypes.${listing.stoneType}`)}</span>
+                <span class="stone-size">{$t('size')}: {listing.stoneSize.toFixed(2)}</span>
               </p>
               <div class="price-info">
                 {#if listing.buyNowPrice}
@@ -453,7 +441,7 @@
                 on:click={() => handleCancelListing(listing.id)}
                 disabled={processingListingId === listing.id}
               >
-                {processingListingId === listing.id ? '처리 중...' : $t('cancelListing')}
+                {processingListingId === listing.id ? $t('processing') : $t('cancelListing')}
               </button>
             </div>
           </div>
@@ -464,83 +452,85 @@
 
   <!-- 뒤로 가기 버튼 -->
   <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
+
+  <div class="market-actions">
+    <button class="sell-button" on:click={() => goto('/market/sell')}>
+      {$t('sellRegistration')}
+    </button>
+  </div>
 </div>
 
 <style>
   .market-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 800px;
+    margin: 2rem auto;
     padding: 1rem;
+    text-align: center;
   }
   
-  .market-actions {
-    display: flex;
-    justify-content: flex-end;
+  h1 {
+    font-size: 2rem;
     margin-bottom: 1rem;
+    text-align: center;
   }
   
-  .sell-button {
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .sell-button:hover {
-    background-color: #219653;
-  }
-  
-  .tabs {
+  .tab-switcher {
     display: flex;
-    border-bottom: 1px solid #ddd;
-    margin-bottom: 1rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
   }
   
-  .tab {
-    padding: 0.75rem 1.5rem;
-    background: none;
-    border: none;
+  .tab-button {
+    padding: 0.5rem 1.5rem;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
     cursor: pointer;
-    font-size: 1rem;
-    border-bottom: 3px solid transparent;
+    transition: background-color 0.3s;
   }
   
-  .tab.active {
-    border-bottom: 3px solid #3498db;
+  .tab-button.active {
+    background-color: #B7DDBF;
     font-weight: bold;
   }
   
-  .filters {
+  .tab-button:first-child {
+    border-radius: 4px 0 0 4px;
+  }
+  
+  .tab-button:last-child {
+    border-radius: 0 4px 4px 0;
+  }
+  
+  .filter-controls {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
   }
   
-  .filter-group {
-    display: flex;
-    flex-direction: column;
-    min-width: 150px;
+  .filter-controls > div {
+    margin: 0.5rem;
   }
   
-  .filter-group label {
-    margin-bottom: 0.3rem;
-    font-size: 0.9rem;
-    color: #666;
-  }
-  
-  .filter-group select {
+  .search-box input {
     padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
+    width: 200px;
+  }
+  
+  .sort-controls select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
   }
   
   .listing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
   }
   
   .stone-tile {
@@ -548,141 +538,118 @@
     border-radius: 8px;
     overflow: hidden;
     background-color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
+    height: 100%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
   }
   
   .stone-image {
-    height: 180px;
-    overflow: hidden;
+    height: 160px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    background-color: #f5f5f5;
+    justify-content: center;
+    background-color: #f9f9f9;
   }
   
   .stone-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 150px;
+    object-fit: contain;
   }
   
   .stone-info {
-    padding: 1rem;
-    flex: 1;
+    padding: 0.8rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
   }
   
   .stone-info h3 {
     margin: 0 0 0.5rem 0;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
   
-  .stone-info .stone-info {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
+  .stone-info p {
+    margin: 0.2rem 0;
     font-size: 0.9rem;
-    color: #666;
+  }
+  
+  .stone-type, .stone-size {
+    display: inline-block;
+    margin-right: 0.5rem;
   }
   
   .price-info {
-    margin-bottom: 0.5rem;
+    margin: 0.5rem 0;
   }
   
   .buy-now-price {
-    margin: 0.2rem 0;
     font-weight: bold;
+    color: #2c7a2c;
   }
   
   .time-remaining {
-    margin-top: 0.5rem;
-    color: #e67e22;
-    font-size: 0.9rem;
-    font-weight: bold;
+    font-size: 0.85rem;
+    color: #666;
   }
   
   .card-actions {
+    padding: 0.8rem;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 1rem;
-    width: 100%;
-    padding: 0 1rem 1rem 1rem;
+    justify-content: center;
+    margin-top: auto;
   }
   
-  .buy-button {
-    background-color: #27ae60;
-    color: white;
-    border: none;
+  .buy-now-button {
+    background-color: #B7DDBF;
+    color: #000;
+    border: 1px solid #ddd;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
   }
   
-  .buy-button:hover {
-    background-color: #219653;
+  .buy-now-button:hover:not(:disabled) {
+    background-color: #A3CBB1;
   }
   
   .cancel-button {
-    background-color: #e74c3c;
-    color: white;
-    border: none;
+    background-color: #F88A87;
+    color: #000;
+    border: 1px solid #ddd;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
   }
   
-  .cancel-button:hover {
-    background-color: #c0392b;
+  .cancel-button:hover:not(:disabled) {
+    background-color: #DF7C7A;
   }
   
-  button:disabled {
-    background-color: #95a5a6;
+  .buy-now-button:disabled, .cancel-button:disabled {
+    background-color: #cccccc;
     cursor: not-allowed;
   }
   
-  .loading, .empty-state {
+  .loading, .error-message, .empty-state {
     text-align: center;
     padding: 2rem;
-    color: #777;
+    margin: 1rem 0;
+    background-color: #f9f9f9;
+    border-radius: 8px;
   }
   
   .error-message {
-    background-color: #ffecec;
-    color: #e74c3c;
-    padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
+    color: #d32f2f;
   }
   
-  .action-button {
-    display: inline-block;
-    margin-top: 1rem;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .action-button:hover {
-    background-color: #2980b9;
-  }
-  
-  @media (max-width: 768px) {
-    .filters {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    
-    .listing-grid {
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    }
-  }
-  
-  /* 뒤로 버튼 스타일 추가 */
+  /* 뒤로 버튼 스타일 */
   .back-btn {
     position: fixed;
     bottom: 20px;
@@ -696,18 +663,21 @@
     margin: 0;
     cursor: pointer;
   }
-  
-  .search-container {
-    margin: 1rem 0;
-    width: 100%;
+
+  .market-actions {
+    margin-top: 1rem;
   }
-  
-  .search-input {
-    width: 100%;
-    padding: 0.75rem;
+
+  .sell-button {
+    background-color: #B7DDBF;
+    color: #000;
     border: 1px solid #ddd;
+    padding: 0.75rem 1.5rem;
     border-radius: 4px;
-    font-size: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    cursor: pointer;
+  }
+
+  .sell-button:hover:not(:disabled) {
+    background-color: #A3CBB1;
   }
 </style>
