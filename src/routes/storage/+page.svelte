@@ -72,7 +72,7 @@
     // 마켓에 등록된 돌인지 확인
     if (stone.market_listings && stone.market_listings.length > 0 && 
         stone.market_listings.some(listing => listing.status === 'active')) {
-      errorMsg = '마켓에 등록된 돌은 불러올 수 없습니다. 마켓에서 취소 후 다시 시도하세요.';
+      errorMsg = $t('marketStoneLoadError');
       return;
     }
     
@@ -132,7 +132,7 @@
     // 마켓에 등록된 돌인지 확인
     if (stone.market_listings && stone.market_listings.length > 0 && 
         stone.market_listings.some(listing => listing.status === 'active')) {
-      errorMsg = '마켓에 등록된 돌은 버릴 수 없습니다. 마켓에서 취소 후 다시 시도하세요.';
+      errorMsg = $t('marketStoneDeleteError');
       return;
     }
     
@@ -247,12 +247,12 @@
                 <span style="color: green; font-weight: bold;"> {$t('currentStoneTag')} </span>
               {/if}
               {#if stone.market_listings && stone.market_listings.length > 0 && stone.market_listings.some(listing => listing.status === 'active')}
-                <span style="color: orange; font-weight: bold;"> 마켓 등록됨 </span>
+                <span style="color: orange; font-weight: bold;"> {$t('marketRegistered')} </span>
               {/if}
             </div>
           </div>
           <div class="stone-actions">
-            {#if stone.id !== $currentStone.id}
+            {#if stone.id !== $currentStone.id && !(stone.market_listings && stone.market_listings.length > 0 && stone.market_listings.some(listing => listing.status === 'active'))}
               <button class="swap" on:click={() => swapStone(stone)}>{$t('loadButton')}</button>
               <button class="delete" on:click={() => deleteStone(stone)}>{$t('throwAwayButton')}</button>
             {/if}

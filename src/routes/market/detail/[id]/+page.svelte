@@ -2,9 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { t } from 'svelte-i18n';
+  import { t, locale } from 'svelte-i18n';
   import { supabase } from '$lib/supabaseClient';
-  import { getListingDetail, cancelListing, buyNow, placeBid, finalizeAuction } from '$lib/marketUtils';
+  import { getListingDetail, cancelListing, buyNow } from '$lib/marketUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   
   const listingId = $page.params.id;
@@ -12,7 +12,6 @@
   let loading = true;
   let errorMsg = '';
   let successMsg = '';
-  let bidAmount = 0;
   let userBalance = 0;
   let isOwner = false;
   let refreshTimer: ReturnType<typeof setInterval>;
@@ -42,13 +41,6 @@
       const result = await getListingDetail(listingId);
       if (result) {
         listing = result;
-        
-        // 최소 입찰가 설정
-        if (listing.currentBidPrice) {
-          bidAmount = listing.currentBidPrice + 1;
-        } else if (listing.minBidPrice) {
-          bidAmount = listing.minBidPrice;
-        }
         
         // 소유자 확인
         const { data: sessionData } = await supabase.auth.getSession();
@@ -84,32 +76,9 @@
     }
   }
   
-  // 입찰 처리
-  async function handlePlaceBid() {
-    errorMsg = '';
-    successMsg = '';
-    if (!bidAmount || bidAmount <= 0) {
-      errorMsg = "유효한 입찰 금액을 입력하세요.";
-      return;
-    }
-    
-    try {
-      const result = await placeBid(listingId, bidAmount);
-      if (result.success) {
-        successMsg = result.message;
-        await loadListingDetail();
-        await loadUserBalance();
-      } else {
-        errorMsg = result.message;
-      }
-    } catch (error) {
-      errorMsg = (error as Error).message;
-    }
-  }
-  
   // 판매 취소
   async function handleCancelListing() {
-    if (!confirm('정말로 판매를 취소하시겠습니까?')) return;
+    if (!confirm($t('confirmCancelListing'))) return;
     
     errorMsg = '';
     successMsg = '';
@@ -126,39 +95,26 @@
     }
   }
   
-  // 경매 종료 처리
-  async function handleFinalizeAuction() {
-    if (!confirm('경매를 종료하고 낙찰 처리하시겠습니까?')) return;
-    
-    errorMsg = '';
-    successMsg = '';
-    try {
-      const result = await finalizeAuction(listingId);
-      if (result.success) {
-        successMsg = result.message;
-        await loadListingDetail();
-      } else {
-        errorMsg = result.message;
-      }
-    } catch (error) {
-      errorMsg = (error as Error).message;
-    }
-  }
-  
   // 남은 시간 표시 형식
   function formatTimeRemaining(seconds: number): string {
-    if (seconds <= 0) return "만료됨";
+    if (seconds <= 0) return $t('expired');
     
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
     
     if (hours > 0) {
-      return `${hours}시간 ${minutes}분`;
+      return $locale === 'ko' 
+        ? `${hours}${$t('hours')} ${minutes}${$t('minutes')}` 
+        : `${hours} ${$t('hours')} ${minutes} ${$t('minutes')}`;
     } else if (minutes > 0) {
-      return `${minutes}분 ${remainingSeconds}초`;
+      return $locale === 'ko'
+        ? `${minutes}${$t('minutes')} ${remainingSeconds}${$t('seconds')}`
+        : `${minutes} ${$t('minutes')} ${remainingSeconds} ${$t('seconds')}`;
     } else {
-      return `${remainingSeconds}초`;
+      return $locale === 'ko'
+        ? `${remainingSeconds}${$t('seconds')}`
+        : `${remainingSeconds} ${$t('seconds')}`;
     }
   }
   
@@ -221,7 +177,7 @@
 
 <div class="detail-container">
   <div class="back-button-container">
-    <button class="back-button" on:click={() => goto('/market')}>← 목록으로 돌아가기</button>
+    <button class="back-button" on:click={() => goto('/market')}>← {$t('backToList')}</button>
   </div>
   
   {#if errorMsg}
@@ -233,9 +189,9 @@
   {/if}
   
   {#if loading}
-    <div class="loading">판매 정보를 불러오는 중...</div>
+    <div class="loading">{$t('loadingListingInfo')}</div>
   {:else if !listing}
-    <div class="not-found">판매 목록을 찾을 수 없습니다.</div>
+    <div class="not-found">{$t('listingNotFound')}</div>
   {:else}
     <div class="listing-detail">
       <div class="stone-image-section">
@@ -253,18 +209,18 @@
         <h1 class="stone-name">{listing.stoneName}</h1>
         
         <div class="stone-details">
-          <p class="stone-type">종류: {listing.stoneType}</p>
-          <p class="stone-size">크기: {listing.stoneSize.toFixed(2)}</p>
+          <p class="stone-type">{$t('stoneType')}: {$t(`stoneTypes.${listing.stoneType}`)}</p>
+          <p class="stone-size">{$t('stoneSize')}: {listing.stoneSize.toFixed(2)}</p>
         </div>
         
         <div class="listing-status">
           {#if listing.status === 'sold'}
-            <p class="sold-notice">판매 완료</p>
+            <p class="sold-notice">{$t('saleComplete')}</p>
           {:else if listing.status === 'expired'}
-            <p class="expired-notice">판매 종료</p>
+            <p class="expired-notice">{$t('saleEnded')}</p>
           {:else}
             <p class="time-remaining {listing.timeRemaining < 300 ? 'urgent' : ''}">
-              남은 시간: {formatTimeRemaining(listing.timeRemaining)}
+               {$t('remainingTime')}: {formatTimeRemaining(listing.timeRemaining)}
             </p>
           {/if}
         </div>
@@ -272,66 +228,27 @@
         <div class="price-section">
           {#if listing.buyNowPrice}
             <div class="buy-now-section">
-              <p class="buy-now-price">즉시 구매가: {listing.buyNowPrice} 스톤</p>
+              <p class="buy-now-price">{$t('buyNowPrice')}: {listing.buyNowPrice} {$t('stone')}</p>
               {#if !isOwner && listing.status === 'active'}
                 <button 
-                  class="buy-now-button" 
-                  disabled={userBalance < listing.buyNowPrice}
+                  class="buy-now-button"
                   on:click={handleBuyNow}
                 >
-                  지금 구매하기
+                  {$t('buyNow')}
                   {#if userBalance < listing.buyNowPrice}
-                    (잔액 부족)
+                    ({$t('insufficientBalance')})
                   {/if}
                 </button>
               {/if}
             </div>
           {/if}
           
-          {#if listing.minBidPrice}
-            <div class="auction-section">
-              {#if listing.currentBidPrice}
-                <p class="current-bid">
-                  현재 입찰가: {listing.currentBidPrice} 스톤
-                  {#if listing.isMyBid}<span class="my-bid">(내 입찰)</span>{/if}
-                </p>
-              {:else}
-                <p class="min-bid">최소 입찰가: {listing.minBidPrice} 스톤</p>
-              {/if}
-              
-              {#if !isOwner && listing.status === 'active'}
-                <div class="bid-input-group">
-                  <input 
-                    type="number" 
-                    bind:value={bidAmount} 
-                    min={listing.currentBidPrice ? listing.currentBidPrice + 1 : listing.minBidPrice} 
-                    step="1"
-                  />
-                  <button 
-                    class="place-bid-button" 
-                    disabled={userBalance < bidAmount || bidAmount <= (listing.currentBidPrice || 0)}
-                    on:click={handlePlaceBid}
-                  >
-                    입찰하기
-                  </button>
-                </div>
-                {#if userBalance < bidAmount}
-                  <p class="balance-warning">잔액이 부족합니다.</p>
-                {/if}
-              {/if}
-            </div>
-          {/if}
-          
-          <p class="user-balance">내 잔액: {userBalance} 스톤</p>
+          <p class="user-balance">{$t('myBalance')}: {userBalance} {$t('stone')}</p>
         </div>
         
         {#if isOwner && listing.status === 'active'}
           <div class="owner-actions">
-            <button class="cancel-button" on:click={handleCancelListing}>판매 취소</button>
-            
-            {#if listing.minBidPrice && listing.currentBidPrice && listing.timeRemaining <= 0}
-              <button class="finalize-button" on:click={handleFinalizeAuction}>낙찰 처리</button>
-            {/if}
+            <button class="cancel-button" on:click={handleCancelListing}>{$t('cancelListing')}</button>
           </div>
         {/if}
       </div>
@@ -460,17 +377,11 @@
     border-radius: 8px;
   }
   
-  .buy-now-section, .auction-section {
+  .buy-now-section {
     margin-bottom: 1rem;
   }
   
-  .buy-now-price, .current-bid, .min-bid {
-    font-size: 1.3rem;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-  }
-  
-  .buy-now-button, .place-bid-button {
+  .buy-now-button {
     background-color: #B7DDBF;
     color: #000;
     border: 1px solid #DDDDDD;
@@ -481,44 +392,14 @@
     transition: background-color 0.2s;
   }
   
-  .buy-now-button:hover:not(:disabled), .place-bid-button:hover:not(:disabled) {
+  .buy-now-button:hover:not(:disabled) {
     background-color: #A3CBB1;
   }
   
-  .buy-now-button:disabled, .place-bid-button:disabled {
+  .buy-now-button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
     opacity: 0.7;
-  }
-  
-  .bid-input-group {
-    display: flex;
-    gap: 0.5rem;
-    margin: 0.5rem 0;
-  }
-  
-  .bid-input-group input {
-    flex: 1;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-  
-  .balance-warning {
-    color: #e74c3c;
-    font-size: 0.9rem;
-    margin-top: 0.3rem;
-  }
-  
-  .user-balance {
-    margin-top: 1rem;
-    font-weight: bold;
-  }
-  
-  .my-bid {
-    color: #3498db;
-    font-size: 0.9rem;
-    margin-left: 0.5rem;
   }
   
   .owner-actions {
@@ -538,19 +419,6 @@
   
   .cancel-button:hover {
     background-color: #c0392b;
-  }
-  
-  .finalize-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .finalize-button:hover {
-    background-color: #2980b9;
   }
   
   @keyframes pulse {

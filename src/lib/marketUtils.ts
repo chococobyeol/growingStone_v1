@@ -8,11 +8,7 @@ export interface ListingItem {
   stoneName: string;
   stoneSize: number;
   buyNowPrice: number | null;
-  minBidPrice: number | null;
-  currentBidPrice: number | null;
-  currentBidderId: string | null;
-  isMyBid: boolean;
-  isMyListing?: boolean;
+  isMyListing: boolean;
   expiresAt: string;
   timeRemaining: number; // 남은 시간 (초)
   seller: {
@@ -86,22 +82,11 @@ async function updateUserBalance(userId: string, newBalance: number): Promise<bo
 export async function createListing(
   stoneId: string, 
   buyNowPrice?: number, 
-  minBidPrice?: number, 
   duration: number = 60
 ): Promise<{ success: boolean; message: string; listingId?: string }> {
   try {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      return { success: false, message: "로그인이 필요합니다." };
-    }
-    
-    // 판매 조건 확인
-    if ((!buyNowPrice || buyNowPrice <= 0) && (!minBidPrice || minBidPrice <= 0)) {
-      return { success: false, message: "즉시 구매 가격 또는 최소 입찰 가격을 설정해야 합니다." };
-    }
-    
-    if (buyNowPrice && minBidPrice && minBidPrice >= buyNowPrice) {
-      return { success: false, message: "최소 입찰 가격은 즉시 구매 가격보다 낮아야 합니다." };
+    if (!buyNowPrice) {
+      return { success: false, message: "구매 가격을 설정해야 합니다." };
     }
     
     // 돌 소유권 확인
@@ -109,7 +94,7 @@ export async function createListing(
       .from('stones')
       .select('*')
       .eq('id', stoneId)
-      .eq('user_id', userId)
+      .eq('user_id', await getCurrentUserId())
       .single();
     
     if (stoneError || !stone) {
@@ -127,11 +112,8 @@ export async function createListing(
       .from('market_listings')
       .insert({
         stone_id: stoneId,
-        seller_id: userId,
-        buy_now_price: buyNowPrice || null,
-        min_bid_price: minBidPrice || null,
-        current_bid_price: null,
-        current_bidder_id: null,
+        seller_id: await getCurrentUserId(),
+        buy_now_price: buyNowPrice,
         expires_at: expiresAt.toISOString(),
         status: 'active'
       })
@@ -193,10 +175,6 @@ export async function getMyListings(): Promise<ListingItem[]> {
         stoneName: stoneData?.name || '',
         stoneSize: stoneData?.size || 0,
         buyNowPrice: item.buy_now_price,
-        minBidPrice: item.min_bid_price,
-        currentBidPrice: item.current_bid_price,
-        currentBidderId: item.current_bidder_id,
-        isMyBid: false, // 내 판매 목록이므로 입찰은 항상 false
         isMyListing: true,
         expiresAt: item.expires_at,
         timeRemaining: timeRemaining,
@@ -264,98 +242,100 @@ export async function cancelListing(listingId: string): Promise<{ success: boole
 // 활성 판매 목록 가져오기
 export async function getActiveListings(options: {
   stoneType?: string;
-  sortBy?: 'created' | 'expiry' | 'size' | 'name';
-  listingType?: 'all' | 'buyNow' | 'auction';
+  sortBy?: 'created' | 'expiry' | 'sizeAsc' | 'sizeDesc' | 'name';
 } = {}): Promise<ListingItem[]> {
   try {
-    // 기본 쿼리
+    const currentUserId = await getCurrentUserId();
+    const { stoneType, sortBy = 'created' } = options;
+    
     let query = supabase
       .from('market_listings')
       .select(`
-        id, stone_id, buy_now_price, min_bid_price, current_bid_price, 
-        current_bidder_id, seller_id, status, expires_at, created_at,
-        stones:stone_id (id, type, name, size)
+        *,
+        stones (*)
       `)
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .not('expires_at', 'is', null)
+      .not('buy_now_price', 'is', null);
     
-    // 돌 종류 필터
-    if (options.stoneType) {
-      query = query.eq('stones.type', options.stoneType);
+    // 스톤 타입 필터링
+    if (stoneType) {
+      query = query.eq('stones.type', stoneType);
     }
     
-    // 판매 유형 필터
-    if (options.listingType === 'buyNow') {
-      query = query.not('buy_now_price', 'is', null);
-    } else if (options.listingType === 'auction') {
-      query = query.not('min_bid_price', 'is', null);
-    }
-    
-    // 정렬
-    if (options.sortBy === 'expiry') {
-      query = query.order('expires_at', { ascending: true });
-    } else if (options.sortBy === 'size') {
-      query = query.order('stones(size)', { ascending: false });
-    } else if (options.sortBy === 'name') {
-      query = query.order('stones(name)', { ascending: true });
-    } else {
+    // 정렬 옵션 및 데이터 반환
+    if (sortBy === 'created') {
       query = query.order('created_at', { ascending: false });
-    }
-    
-    // 결과 가져오기
-    const { data, error } = await query;
-    
-    if (error) {
-      throw error;
-    }
-    
-    // 현재 사용자 ID 가져오기
-    const currentUserId = await getCurrentUserId();
-    
-    // 만료된 항목은 반환하지 않도록 필터링
-    return (data || [])
-      .filter(item => {
-        const expiresAt = new Date(item.expires_at);
-        const now = new Date();
-        return expiresAt > now; // 만료되지 않은 항목만 반환
-      })
-      .map(item => {
-        // 스톤 데이터 처리
-        const stoneData = Array.isArray(item.stones) ? item.stones[0] : item.stones;
-        const expiresAt = new Date(item.expires_at);
-        const now = new Date();
-        const timeRemaining = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
-        
-        // 스톤 데이터가 없거나 비어있는 경우 기본값 설정
-        const stoneName = stoneData?.name || '이름 없음';
-        const stoneType = stoneData?.type || '알 수 없음';
-        const stoneSize = stoneData?.size || 0;
-        
-        console.log('스톤 데이터:', stoneData, '판매 ID:', item.id);
-        
-        return {
-          id: item.id,
-          stoneId: item.stone_id,
-          stoneType: stoneType,
-          stoneName: stoneName,
-          stoneSize: stoneSize,
-          buyNowPrice: item.buy_now_price,
-          minBidPrice: item.min_bid_price,
-          currentBidPrice: item.current_bid_price,
-          currentBidderId: item.current_bidder_id,
-          isMyBid: !!(currentUserId && item.current_bidder_id === currentUserId),
-          isMyListing: !!(currentUserId && item.seller_id === currentUserId),
-          expiresAt: item.expires_at,
-          timeRemaining: timeRemaining,
-          seller: {
-            id: item.seller_id
-          },
-          status: item.status
-        };
+      const { data, error } = await query;
+      if (error) throw error;
+      return formatListingData(data, currentUserId);
+    } else if (sortBy === 'expiry') {
+      query = query.order('expires_at', { ascending: true });
+      const { data, error } = await query;
+      if (error) throw error;
+      return formatListingData(data, currentUserId);
+    } else if (sortBy === 'sizeAsc') {
+      // Supabase 외래 테이블 정렬 문법 수정
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      // 클라이언트 측에서 정렬 - 돌 크기 오름차순
+      return formatListingData(data, currentUserId).sort((a, b) => a.stoneSize - b.stoneSize);
+    } else if (sortBy === 'sizeDesc') {
+      // 클라이언트 측에서 정렬 - 돌 크기 내림차순
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return formatListingData(data, currentUserId).sort((a, b) => b.stoneSize - a.stoneSize);
+    } else if (sortBy === 'name') {
+      // 이름순 정렬 - 영문이 먼저 오도록 수정
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return formatListingData(data, currentUserId).sort((a, b) => {
+        // 영문, 숫자가 한글보다 먼저 오도록 'en' 로케일 사용
+        return a.stoneName.localeCompare(b.stoneName, 'en');
       });
+    } else {
+      // 기본 정렬 실행
+      const { data, error } = await query;
+      if (error) throw error;
+      return formatListingData(data, currentUserId);
+    }
   } catch (error) {
     console.error('활성 판매 목록 가져오기 오류:', error);
     throw error;
   }
+}
+
+// 결과 데이터 포맷팅 함수를 분리하여 코드 중복 제거
+function formatListingData(data: any[], currentUserId: string | null): ListingItem[] {
+  const now = new Date();
+  
+  return data.map(item => {
+    const stoneData = Array.isArray(item.stones) ? item.stones[0] : item.stones;
+    const expiresAt = new Date(item.expires_at);
+    const timeRemaining = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+    
+    return {
+      id: item.id,
+      stoneId: item.stone_id,
+      stoneType: stoneData?.type || 'unknown',
+      stoneName: stoneData?.name || '이름 없음',
+      stoneSize: stoneData?.size || 0,
+      buyNowPrice: item.buy_now_price,
+      isMyListing: currentUserId === item.seller_id,
+      expiresAt: item.expires_at,
+      timeRemaining: timeRemaining,
+      seller: {
+        id: item.seller_id
+      },
+      status: item.status
+    };
+  });
 }
 
 // 스톤 보관함 새로고침 함수 추가
@@ -444,63 +424,6 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
   }
 }
 
-// 입찰
-export async function placeBid(listingId: string, bidAmount: number): Promise<{ success: boolean; message: string }> {
-  try {
-    // 트랜잭션 시작 전 search_path 설정 추가
-    const { error: pathError } = await supabase.rpc('set_search_path', { 
-      path: 'public' 
-    });
-    
-    if (pathError) {
-      console.error('Search path 설정 실패:', pathError);
-    }
-    
-    // RPC 함수로 입찰 처리
-    const { data, error } = await supabase.rpc('place_bid_transaction', {
-      listing_id: listingId,
-      bid_amount: bidAmount
-    });
-    
-    if (error) {
-      console.error("입찰 함수 오류:", error);
-      return { success: false, message: "입찰 처리 중 오류가 발생했습니다." };
-    }
-    
-    return { success: true, message: "입찰이 완료되었습니다." };
-  } catch (error) {
-    console.error("입찰 함수 오류:", error);
-    return { success: false, message: "입찰 처리 중 오류가 발생했습니다." };
-  }
-}
-
-// 낙찰 처리
-export async function finalizeAuction(listingId: string): Promise<{ success: boolean; message: string }> {
-  try {
-    // 트랜잭션 시작 전 search_path 설정 추가
-    const { error: pathError } = await supabase.rpc('set_search_path', { 
-      path: 'public' 
-    });
-    
-    if (pathError) {
-      console.error('Search path 설정 실패:', pathError);
-    }
-    
-    // 수정된 파라미터 이름
-    const { data, error: transactionError } = await supabase.rpc('finalize_auction_transaction', {
-      listing_id: listingId
-    });
-    
-    if (transactionError) {
-      return { success: false, message: "낙찰 처리 중 오류가 발생했습니다: " + transactionError.message };
-    }
-    
-    return { success: true, message: "낙찰 처리가 완료되었습니다." };
-  } catch (error) {
-    return { success: false, message: "오류가 발생했습니다: " + (error as Error).message };
-  }
-}
-
 // 만료된 판매 목록 확인 및 처리
 export async function checkExpiredListings() {
   try {
@@ -552,8 +475,7 @@ export async function getListingDetail(listingId: string): Promise<any> {
       .from('market_listings')
       .select(`
         *,
-        seller:profiles!market_listings_seller_id_fkey(id, username),
-        bidder:profiles!market_listings_current_bidder_id_fkey(id, username)
+        seller:profiles!market_listings_seller_id_fkey(id, username)
       `)
       .eq('id', listingId)
       .single();
@@ -618,29 +540,21 @@ export async function getListingDetail(listingId: string): Promise<any> {
     const expiresAt = new Date(listing.expires_at);
     const timeRemaining = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
     
-    // 내가 입찰했는지 여부 확인
-    const isMyBid = !!(currentUserId && listing.current_bidder_id === currentUserId);
-    
     // 목록 정보를 일관된 형식으로 변환
     return {
       id: listing.id,
       stoneId: listing.stone_id,
       sellerId: listing.seller_id,
       buyNowPrice: listing.buy_now_price,
-      minBidPrice: listing.min_bid_price,
-      currentBidPrice: listing.current_bid_price,
-      currentBidderId: listing.current_bidder_id,
       expiresAt: listing.expires_at,
       status: listing.status,
       createdAt: listing.created_at,
       updatedAt: listing.updated_at,
       timeRemaining,
       seller: listing.seller || { id: listing.seller_id, username: '알 수 없음' },
-      currentBidder: listing.bidder || null,
       stoneType: directStone?.type || 'unknown',
       stoneName: directStone?.name || '이름 없음',
       stoneSize: directStone?.size || 0,
-      isMyBid
     };
   } catch (error) {
     console.error('판매 목록 상세 정보 가져오기 실패:', error);

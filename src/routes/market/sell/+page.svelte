@@ -23,7 +23,6 @@
   // 판매 폼 상태
   let selectedStoneId = '';
   let buyNowPrice: number | undefined = undefined;
-  let minBidPrice: number | undefined = undefined;
   let duration = 60; // 기본 60분
   
   // 내 돌 목록 로딩
@@ -75,20 +74,14 @@
         return;
       }
       
-      if ((!buyNowPrice || buyNowPrice <= 0) && (!minBidPrice || minBidPrice <= 0)) {
-        errorMsg = "즉시 구매 가격 또는 최소 입찰 가격을 설정해야 합니다.";
-        return;
-      }
-      
-      if (buyNowPrice && minBidPrice && minBidPrice >= buyNowPrice) {
-        errorMsg = "최소 입찰 가격은 즉시 구매 가격보다 낮아야 합니다.";
+      if (!buyNowPrice || buyNowPrice <= 0) {
+        errorMsg = "구매 가격을 설정해야 합니다.";
         return;
       }
       
       const result = await createListing(
         selectedStoneId,
         buyNowPrice || undefined,
-        minBidPrice || undefined,
         duration
       );
       
@@ -97,7 +90,6 @@
         // 성공 후 필드 초기화
         selectedStoneId = '';
         buyNowPrice = undefined;
-        minBidPrice = undefined;
         duration = 60;
         // 돌 목록 다시 로드
         await loadMyStones();
@@ -110,7 +102,7 @@
         errorMsg = result.message;
       }
     } catch (error) {
-      errorMsg = "판매 등록 중 오류가 발생했습니다: " + (error as Error).message;
+      errorMsg = (error as Error).message;
     }
   }
   
@@ -124,7 +116,7 @@
     </button>
   </div>
   
-  <h1>돌 판매 등록</h1>
+  <h1>{$t('sellStone')}</h1>
   
   {#if errorMsg}
     <div class="error-message">{errorMsg}</div>
@@ -142,58 +134,45 @@
     {:else}
       <form class="sell-form" on:submit|preventDefault={handleSubmit}>
         <div class="form-group">
-          <label for="stone-select">판매할 돌 선택</label>
-          <select id="stone-select" bind:value={selectedStoneId} required>
-            <option value="">-- 선택하세요 --</option>
+          <label for="stone-select">{$t('selectStone')}</label>
+          <select id="stone-select" bind:value={selectedStoneId}>
+            <option value="">{$t('chooseStonePlaceholder')}</option>
             {#each stones as stone}
-              <option value={stone.id}>
-                {stone.name} ({stone.type}, 크기: {stone.size.toFixed(2)})
-              </option>
+              <option value={stone.id}>{stone.name} ({$t(`stoneTypes.${stone.type}`)})</option>
             {/each}
           </select>
         </div>
         
         <div class="form-group">
-          <label for="buy-now-price">즉시 구매 가격 (스톤)</label>
-          <input
-            id="buy-now-price"
-            type="number"
-            bind:value={buyNowPrice}
-            min="1"
-            placeholder="즉시 구매 불가능"
+          <label for="buy-now-price">{$t('buyNowPrice')}</label>
+          <input 
+            id="buy-now-price" 
+            type="number" 
+            bind:value={buyNowPrice} 
+            min="1" 
+            step="1"
+            placeholder={$t('enterPricePlaceholder')}
           />
-          <small>비워두면 경매만 가능합니다.</small>
         </div>
         
         <div class="form-group">
-          <label for="min-bid-price">최소 입찰 가격 (스톤)</label>
-          <input
-            id="min-bid-price"
-            type="number"
-            bind:value={minBidPrice}
-            min="1"
-            placeholder="경매 불가능"
-          />
-          <small>비워두면 즉시 구매만 가능합니다.</small>
-        </div>
-        
-        <div class="form-group">
-          <label for="duration">판매 기간 (분)</label>
+          <label for="duration">{$t('listingDuration')}</label>
           <select id="duration" bind:value={duration}>
-            <option value="5">5분 (테스트용)</option>
-            <option value="60">1시간</option>
-            <option value="360">6시간</option>
-            <option value="720">12시간</option>
-            <option value="1440">24시간</option>
+            <option value="60">1 {$t('hour')}</option>
+            <option value="360">6 {$t('hours')}</option>
+            <option value="720">12 {$t('hours')}</option>
+            <option value="1440">1 {$t('day')}</option>
+            <option value="4320">3 {$t('days')}</option>
+            <option value="10080">7 {$t('days')}</option>
           </select>
         </div>
         
         <button
           type="submit"
           class="submit-button"
-          disabled={!selectedStoneId || ((!buyNowPrice || buyNowPrice <= 0) && (!minBidPrice || minBidPrice <= 0))}
+          disabled={!selectedStoneId || !buyNowPrice || buyNowPrice <= 0}
         >
-          판매 등록하기
+          {loading ? $t('processing') : $t('listForSale')}
         </button>
       </form>
     {/if}
@@ -265,16 +244,9 @@
   
   .form-group input, .form-group select {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 1rem;
-  }
-  
-  .form-group small {
-    display: block;
-    margin-top: 0.25rem;
-    color: #888;
   }
   
   .submit-button {
