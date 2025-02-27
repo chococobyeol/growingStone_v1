@@ -23,7 +23,7 @@
   // 판매 폼 상태
   let selectedStoneId = '';
   let buyNowPrice: number | undefined = undefined;
-  let duration = 60; // 기본 60분
+  let duration = 1440; // 기본 1일 (1440분)
   
   // 내 돌 목록 로딩
   async function loadMyStones() {
@@ -90,7 +90,7 @@
         // 성공 후 필드 초기화
         selectedStoneId = '';
         buyNowPrice = undefined;
-        duration = 60;
+        duration = 1440;
         // 돌 목록 다시 로드
         await loadMyStones();
         
@@ -153,14 +153,12 @@
             step="1"
             placeholder={$t('enterPricePlaceholder')}
           />
+          <small class="commission-info">{$t('listingCommission')}</small>
         </div>
         
         <div class="form-group">
           <label for="duration">{$t('listingDuration')}</label>
           <select id="duration" bind:value={duration}>
-            <option value="60">1 {$t('hour')}</option>
-            <option value="360">6 {$t('hours')}</option>
-            <option value="720">12 {$t('hours')}</option>
             <option value="1440">1 {$t('day')}</option>
             <option value="4320">3 {$t('days')}</option>
             <option value="10080">7 {$t('days')}</option>
@@ -247,6 +245,13 @@
     padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
+  }
+  
+  .commission-info {
+    display: block;
+    margin-top: 0.5rem;
+    color: #777;
+    font-size: 0.9rem;
   }
   
   .submit-button {

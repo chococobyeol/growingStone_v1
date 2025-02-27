@@ -132,5 +132,6 @@
   "sortBySizeDesc": "Size (High to Low)",
   "sortByName": "Name",
   "loading": "Loading...",
-  "noStonesAvailable": "No stones available."
+  "noStonesAvailable": "No stones available.",
+  "listingCommission": "5% commission"
 }

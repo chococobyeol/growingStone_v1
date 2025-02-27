@@ -132,5 +132,6 @@
   "sortBySizeDesc": "크기 내림차순",
   "sortByName": "이름순",
   "loading": "로딩 중...",
-  "noStonesAvailable": "판매 중인 돌이 없습니다."
+  "noStonesAvailable": "판매 중인 돌이 없습니다.",
+  "listingCommission": "수수료 5% 부과"
 }
