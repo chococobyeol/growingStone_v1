@@ -33,6 +33,24 @@
     schist: '편암'
   };
   
+  // ★ 추가: 보유 자금 변수 선언
+  let balance: number = 0;
+  
+  // ★ 추가: 사용자 보유 자금 불러오기 함수
+  async function loadBalance() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', sessionData.session.user.id)
+        .single();
+      if (!error && data) {
+        balance = data.balance;
+      }
+    }
+  }
+  
   // 초기 로딩 함수 - 구매 탭
   async function loadMarketListings() {
     loading = true;
@@ -188,6 +206,8 @@
   // 뒤로 가기 및 새로고침 시 상태 유지 (옵션)
   onMount(() => {
     loadListings();
+    loadMarketListings();
+    loadBalance();
   });
 
   function loadListings() {
@@ -354,7 +374,15 @@
         </select>
       </div>
     </div>
-      
+    
+    <!-- 예: 탭 영역 또는 필터 영역 아래에 보유 자금 영역을 둔다 -->
+    <div class="balance-wrapper">
+      <div class="balance-display">
+        <img class="balance-icon" src="/assets/icons/stone.png" alt={$t('stone')} />
+        <span>{balance.toLocaleString()}</span>
+      </div>
+    </div>
+    
     <!-- 판매 목록 섹션 -->
     {#if loading}
       <div class="loading">{$t('loading')}</div>
@@ -403,6 +431,14 @@
     {/if}
   {:else}
     <!-- 판매 탭 내용 -->
+    <!-- 보유 자금 표시 (목록/Empty State 위쪽) -->
+    <div class="balance-wrapper">
+      <div class="balance-display">
+        <img class="balance-icon" src="/assets/icons/stone.png" alt={$t('stone')} />
+        <span>{balance.toLocaleString()}</span>
+      </div>
+    </div>
+    
     {#if loading}
       <div class="loading">{$t('loading')}</div>
     {:else if errorMsg}
@@ -679,5 +715,33 @@
 
   .sell-button:hover:not(:disabled) {
     background-color: #A3CBB1;
+  }
+
+  /* 보유 자금 영역만 왼쪽 정렬 */
+  .balance-wrapper {
+    text-align: left;
+    margin-bottom: -0.7rem;
+  }
+
+  /* 기존 카드나 다른 영역에는 영향을 주지 않음 */
+  .balance-display {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    padding: 0.0rem 0.5rem;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    line-height: 1;
+  }
+
+  .balance-icon {
+    width: 2rem;
+    height: 2rem;
+    margin-right: 0.2rem;
+  }
+
+  .balance-display span {
+    font-size: 1rem;
+    line-height: 1;
   }
 </style>
