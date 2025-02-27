@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
-  import { t } from 'svelte-i18n';
+  import { t, locale } from 'svelte-i18n';
   import { supabase } from '$lib/supabaseClient';
-  import { getActiveListings, getMyListings, checkExpiredListings, buyNow, placeBid, cancelListing } from '$lib/marketUtils';
+  import { getActiveListings, getMyListings, checkExpiredListings, buyNow, cancelListing } from '$lib/marketUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import type { ListingItem } from '$lib/marketUtils';
   import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -12,17 +12,26 @@
   let myListings: ListingItem[] = [];
   let loading = true;
   let errorMsg = '';
-  let selectedType = 'all';
-  let selectedSortBy = 'created';
-  let selectedListingType = 'all';
+  let selectedSortBy: 'created' | 'expiry' | 'sizeAsc' | 'sizeDesc' | 'name' = 'created';
   let refreshInterval: ReturnType<typeof setInterval>;
   let marketSubscription: RealtimeChannel;
   let currentUserId: string | null = null;
-  let bidAmounts: {[key: string]: number} = {};
   let processingListingId: string | null = null;
   
   // 새로 추가: 마켓 탭 상태 (buy=구매, sell=판매)
   let marketTab = 'buy';
+  
+  // 필터 옵션
+  let searchQuery = '';
+  
+  // 돌 종류 상수 정의
+  const stoneTypes = {
+    granite: '화강암',
+    marble: '대리석',
+    basalt: '현무암',
+    sandstone: '사암',
+    schist: '편암'
+  };
   
   // 초기 로딩 함수 - 구매 탭
   async function loadMarketListings() {
@@ -34,9 +43,7 @@
       
       // 그 다음 목록 로딩
       listings = await getActiveListings({
-        stoneType: selectedType !== 'all' ? selectedType : undefined,
         sortBy: selectedSortBy as any,
-        listingType: selectedListingType as any
       });
       
       // 사용자 정보 로드
@@ -65,17 +72,6 @@
   async function loadUserInfo() {
     const { data } = await supabase.auth.getSession();
     currentUserId = data?.session?.user?.id || null;
-    
-    // 각 항목에 대한 초기 입찰가 설정
-    if (listings.length > 0) {
-      listings.forEach(listing => {
-        if (listing.minBidPrice) {
-          bidAmounts[listing.id] = listing.currentBidPrice 
-            ? listing.currentBidPrice + 1 
-            : listing.minBidPrice;
-        }
-      });
-    }
   }
   
   // 탭 전환 함수
@@ -91,18 +87,24 @@
   
   // 남은 시간 표시 형식
   function formatTimeRemaining(seconds: number): string {
-    if (seconds <= 0) return "만료됨";
+    if (seconds <= 0) return $t('expired');
     
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
     
     if (hours > 0) {
-      return `${hours}시간 ${minutes}분`;
+      return $locale === 'ko' 
+        ? `${hours}${$t('hours')} ${minutes}${$t('minutes')}` 
+        : `${hours} ${$t('hours')} ${minutes} ${$t('minutes')}`;
     } else if (minutes > 0) {
-      return `${minutes}분 ${remainingSeconds}초`;
+      return $locale === 'ko'
+        ? `${minutes}${$t('minutes')} ${remainingSeconds}${$t('seconds')}`
+        : `${minutes} ${$t('minutes')} ${remainingSeconds} ${$t('seconds')}`;
     } else {
-      return `${remainingSeconds}초`;
+      return $locale === 'ko'
+        ? `${remainingSeconds}${$t('seconds')}`
+        : `${remainingSeconds} ${$t('seconds')}`;
     }
   }
   
@@ -119,36 +121,10 @@
     
     processingListingId = listingId;
     try {
-      const result = await buyNow(listingId);
-      if (result.success) {
-        alert(result.message);
-        await loadMarketListings();
-      } else {
-        alert(result.message);
-      }
+      await buyNow(listingId);
+      await loadMarketListings();
     } catch (error) {
-      alert('구매 처리 중 오류가 발생했습니다.');
-    } finally {
-      processingListingId = null;
-    }
-  }
-  
-  // 입찰 처리
-  async function handlePlaceBid(listingId: string) {
-    if (!bidAmounts[listingId] || processingListingId) return;
-    
-    processingListingId = listingId;
-    try {
-      const bidAmount = bidAmounts[listingId];
-      const result = await placeBid(listingId, bidAmount);
-      if (result.success) {
-        alert(result.message);
-        await loadMarketListings();
-      } else {
-        alert(result.message);
-      }
-    } catch (error) {
-      alert('입찰 처리 중 오류가 발생했습니다.');
+      alert($t('purchaseError'));
     } finally {
       processingListingId = null;
     }
@@ -156,7 +132,7 @@
   
   // 판매 취소 처리
   async function handleCancelListing(listingId: string) {
-    if (!confirm('정말 판매를 취소하시겠습니까?') || processingListingId) return;
+    if (!confirm($t('confirmCancelListing')) || processingListingId) return;
     
     processingListingId = listingId;
     try {
@@ -169,15 +145,66 @@
           await loadMySellingItems();
         }
       } else {
-        alert(result.message);
+        alert($t('cancelSaleError'));
       }
     } catch (error) {
-      alert('판매 취소 중 오류가 발생했습니다.');
+      alert($t('cancelSaleError'));
     } finally {
       processingListingId = null;
     }
   }
   
+  // 필터 옵션 적용
+  function applyFilters() {
+    getActiveListings({
+      sortBy: selectedSortBy,
+    })
+    .then(data => {
+      listings = data;
+      // 검색어 적용
+      if (searchQuery) {
+        listings = listings.filter(item => {
+          const nameMatch = item.stoneName.toLowerCase().includes(searchQuery.toLowerCase());
+          const typeMatchEn = item.stoneType.toLowerCase().includes(searchQuery.toLowerCase());
+          
+          // 한글 타입명으로 검색 개선
+          const koreanType = $t(`stoneTypes.${item.stoneType}`);
+          const typeMatchKo = koreanType && koreanType.toLowerCase().includes(searchQuery.toLowerCase());
+          
+          return nameMatch || typeMatchEn || typeMatchKo;
+        });
+      }
+    })
+    .catch(error => {
+      errorMsg = $t('loadingListingsError');
+    });
+  }
+  
+  // 필터링 필드 변경 핸들러
+  function handleFilterChange() {
+    applyFilters();
+  }
+  
+  // 뒤로 가기 및 새로고침 시 상태 유지 (옵션)
+  onMount(() => {
+    loadListings();
+  });
+
+  function loadListings() {
+    loading = true;
+    getActiveListings({
+      sortBy: selectedSortBy,
+    })
+    .then(data => {
+      listings = data;
+      loading = false;
+    })
+    .catch(error => {
+      errorMsg = $t('loadingListingsError');
+      loading = false;
+    });
+  }
+
   // 실시간 구독 설정
   onMount(() => {
     // 초기 데이터 로딩
@@ -211,7 +238,7 @@
       .channel('market-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'market_listings' }, 
-        (payload) => {
+        async (payload) => {
           console.log('마켓 데이터 변경 감지:', payload);
           // 비동기 작업 없이 변경 감지만 하고 데이터 갱신은 별도로 처리
           setTimeout(() => refreshListingsData(), 100);
@@ -240,9 +267,7 @@
       // 현재 탭에 따라 데이터 갱신
       if (marketTab === 'buy') {
         const newListings = await getActiveListings({
-          stoneType: selectedType !== 'all' ? selectedType : undefined,
           sortBy: selectedSortBy as any,
-          listingType: selectedListingType as any
         });
         listings = newListings;
       } else if (marketTab === 'sell') {
@@ -253,73 +278,98 @@
       console.error('데이터 갱신 중 오류:', error);
     }
   }
+
+  // 실시간 업데이트 처리
+  function setupRealTimeSubscription() {
+    marketSubscription = supabase
+      .channel('market-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'market_listings' }, 
+        async (payload) => {
+          console.log('마켓 데이터 변경 감지:', payload);
+          if (marketTab === 'buy') {
+            const newListings = await getActiveListings({
+              sortBy: selectedSortBy as any,
+            });
+            
+            // 검색어가 있는 경우 필터링 적용
+            if (searchQuery) {
+              listings = newListings.filter(item => {
+                const nameMatch = item.stoneName.toLowerCase().includes(searchQuery.toLowerCase());
+                const typeMatchEn = item.stoneType.toLowerCase().includes(searchQuery.toLowerCase());
+                const koreanType = $t(`stoneTypes.${item.stoneType}`);
+                const typeMatchKo = koreanType && koreanType.toLowerCase().includes(searchQuery.toLowerCase());
+                return nameMatch || typeMatchEn || typeMatchKo;
+              });
+            } else {
+              listings = newListings;
+            }
+          }
+        })
+      .subscribe();
+  }
 </script>
 
 <div class="market-container">
-  <h1>돌 마켓</h1>
+  <h1>{$t('stoneMarket')}</h1>
   
   <div class="market-actions">
-    <button class="sell-button" on:click={() => goto('/market/sell')}>판매 등록</button>
+    <button class="sell-button" on:click={() => goto('/market/sell')}>{$t('sellRegistration')}</button>
   </div>
   
-  <!-- 탭 메뉴 추가 -->
-  <div class="market-tabs">
+  <div class="tabs">
     <button 
-      class={marketTab === 'buy' ? 'active' : ''} 
+      class={`tab ${marketTab === 'buy' ? 'active' : ''}`} 
       on:click={() => switchTab('buy')}
     >
-      구매하기
+      {$t('buy')}
     </button>
     <button 
-      class={marketTab === 'sell' ? 'active' : ''} 
+      class={`tab ${marketTab === 'sell' ? 'active' : ''}`} 
       on:click={() => switchTab('sell')}
     >
-      내 판매 목록
+      {$t('mySalesList')}
     </button>
   </div>
   
   {#if marketTab === 'buy'}
-    <!-- 구매 탭 내용 -->
-    <div class="filter-controls">
-      <!-- 기존 필터 컨트롤 -->
+    <!-- 검색 바를 상단으로 이동 -->
+    <div class="search-container">
+      <input 
+        type="text" 
+        placeholder={$t('searchByNameOrType')}
+        bind:value={searchQuery} 
+        on:input={handleFilterChange}
+        class="search-input"
+      />
+    </div>
+    
+    <div class="filters">
+      <!-- 정렬 옵션 -->
       <div class="filter-group">
-        <label for="stoneType">돌 종류:</label>
-        <select id="stoneType" bind:value={selectedType} on:change={loadMarketListings}>
-          <option value="all">전체</option>
-          <option value="화강암">화강암</option>
-          <option value="대리석">대리석</option>
-          <option value="현무암">현무암</option>
-          <option value="사암">사암</option>
-          <option value="편암">편암</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="listingType">판매 유형:</label>
-        <select id="listingType" bind:value={selectedListingType} on:change={loadMarketListings}>
-          <option value="all">전체</option>
-          <option value="buyNow">즉시 구매</option>
-          <option value="auction">경매</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="sortBy">정렬:</label>
-        <select id="sortBy" bind:value={selectedSortBy} on:change={loadMarketListings}>
-          <option value="created">최신순</option>
-          <option value="expiry">마감임박순</option>
-          <option value="size">크기순</option>
-          <option value="name">이름순</option>
+        <label for="sortBy">{$t('sortBy')}</label>
+        <select id="sortBy" bind:value={selectedSortBy} on:change={handleFilterChange}>
+          <option value="created">{$t('latestFirst')}</option>
+          <option value="expiry">{$t('expiryImminent')}</option>
+          <option value="sizeAsc">{$t('sizeAscending')}</option>
+          <option value="sizeDesc">{$t('sizeDescending')}</option>
+          <option value="name">{$t('nameOrder')}</option>
         </select>
       </div>
     </div>
     
+    <!-- 구매 탭 내용 -->
     {#if loading}
       <div class="loading">로딩 중...</div>
     {:else if errorMsg}
       <div class="error-message">{errorMsg}</div>
     {:else if listings.length === 0}
-      <div class="empty-state">판매 중인 돌이 없습니다.</div>
+      <div class="empty-state">
+        {$t('noStonesOnSale')}
+        <button on:click={() => goto('/market/sell')} class="action-button">
+          {$t('sellStoneButton')}
+        </button>
+      </div>
     {:else}
       <div class="listing-grid">
         {#each listings as listing}
@@ -340,18 +390,10 @@
               </p>
               <div class="price-info">
                 {#if listing.buyNowPrice}
-                  <p class="buy-now-price">즉시 구매: {listing.buyNowPrice} 스톤</p>
-                {/if}
-                {#if listing.currentBidPrice}
-                  <p class="current-bid-price">
-                    현재 입찰가: {listing.currentBidPrice} 스톤
-                    {#if listing.isMyBid}<span class="my-bid">(내 입찰)</span>{/if}
-                  </p>
-                {:else if listing.minBidPrice}
-                  <p class="min-bid-price">시작 입찰가: {listing.minBidPrice} 스톤</p>
+                  <p class="buy-now-price">{$t('buyNowPrice')}: {listing.buyNowPrice} {$t('stone')}</p>
                 {/if}
               </div>
-              <p class="time-remaining">남은 시간: {formatTimeRemaining(listing.timeRemaining)}</p>
+              <p class="time-remaining">{$t('remainingTime')}: {formatTimeRemaining(listing.timeRemaining)}</p>
             </div>
             
             <div class="card-actions">
@@ -362,25 +404,8 @@
                     on:click={() => handleBuyNow(listing.id)}
                     disabled={processingListingId === listing.id}
                   >
-                    즉시 구매
+                    {$t('buyNow')}
                   </button>
-                {/if}
-                
-                {#if listing.minBidPrice && listing.timeRemaining > 0}
-                  <div class="bid-controls">
-                    <input 
-                      type="number" 
-                      bind:value={bidAmounts[listing.id]} 
-                      min={listing.currentBidPrice ? listing.currentBidPrice + 1 : listing.minBidPrice}
-                    />
-                    <button 
-                      class="bid-button" 
-                      on:click={() => handlePlaceBid(listing.id)}
-                      disabled={processingListingId === listing.id}
-                    >
-                      {processingListingId === listing.id ? '처리 중...' : '입찰'}
-                    </button>
-                  </div>
                 {/if}
               {/if}
             </div>
@@ -395,9 +420,7 @@
     {:else if errorMsg}
       <div class="error-message">{errorMsg}</div>
     {:else if myListings.length === 0}
-      <div class="empty-state">판매 중인 돌이 없습니다.
-        <button class="action-button" on:click={() => goto('/market/sell')}>돌 판매하기</button>
-      </div>
+      <div class="empty-state">{$t('noStonesOnSale')}</div>
     {:else}
       <div class="listing-grid">
         {#each myListings as listing}
@@ -418,17 +441,10 @@
               </p>
               <div class="price-info">
                 {#if listing.buyNowPrice}
-                  <p class="buy-now-price">즉시 구매: {listing.buyNowPrice} 스톤</p>
-                {/if}
-                {#if listing.currentBidPrice}
-                  <p class="current-bid-price">
-                    현재 입찰가: {listing.currentBidPrice} 스톤
-                  </p>
-                {:else if listing.minBidPrice}
-                  <p class="min-bid-price">시작 입찰가: {listing.minBidPrice} 스톤</p>
+                  <p class="buy-now-price">{$t('buyNowPrice')}: {listing.buyNowPrice} {$t('stone')}</p>
                 {/if}
               </div>
-              <p class="time-remaining">남은 시간: {formatTimeRemaining(listing.timeRemaining)}</p>
+              <p class="time-remaining">{$t('remainingTime')}: {formatTimeRemaining(listing.timeRemaining)}</p>
             </div>
             
             <div class="card-actions">
@@ -437,7 +453,7 @@
                 on:click={() => handleCancelListing(listing.id)}
                 disabled={processingListingId === listing.id}
               >
-                {processingListingId === listing.id ? '처리 중...' : '판매 취소'}
+                {processingListingId === listing.id ? '처리 중...' : $t('cancelListing')}
               </button>
             </div>
           </div>
@@ -476,14 +492,13 @@
     background-color: #219653;
   }
   
-  /* 탭 스타일 추가 */
-  .market-tabs {
+  .tabs {
     display: flex;
     border-bottom: 1px solid #ddd;
     margin-bottom: 1rem;
   }
   
-  .market-tabs button {
+  .tab {
     padding: 0.75rem 1.5rem;
     background: none;
     border: none;
@@ -492,12 +507,12 @@
     border-bottom: 3px solid transparent;
   }
   
-  .market-tabs button.active {
+  .tab.active {
     border-bottom: 3px solid #3498db;
     font-weight: bold;
   }
   
-  .filter-controls {
+  .filters {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
@@ -575,14 +590,9 @@
     margin-bottom: 0.5rem;
   }
   
-  .buy-now-price, .current-bid-price, .min-bid-price {
+  .buy-now-price {
     margin: 0.2rem 0;
     font-weight: bold;
-  }
-  
-  .my-bid {
-    color: #3498db;
-    font-size: 0.8rem;
   }
   
   .time-remaining {
@@ -601,19 +611,7 @@
     padding: 0 1rem 1rem 1rem;
   }
   
-  .bid-controls {
-    display: flex;
-    gap: 8px;
-  }
-  
-  .bid-controls input {
-    flex: 1;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .buy-button, .bid-button {
+  .buy-button {
     background-color: #27ae60;
     color: white;
     border: none;
@@ -622,7 +620,7 @@
     cursor: pointer;
   }
   
-  .buy-button:hover, .bid-button:hover {
+  .buy-button:hover {
     background-color: #219653;
   }
   
@@ -674,7 +672,7 @@
   }
   
   @media (max-width: 768px) {
-    .filter-controls {
+    .filters {
       flex-direction: column;
       align-items: stretch;
     }
@@ -697,5 +695,19 @@
     z-index: 1000;
     margin: 0;
     cursor: pointer;
+  }
+  
+  .search-container {
+    margin: 1rem 0;
+    width: 100%;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   }
 </style>
