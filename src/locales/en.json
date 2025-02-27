@@ -70,6 +70,7 @@
   "createdAt": "First Discovery",
   "linkCopied": "Link copied!",
   "comingSoon": "Coming soon.",
+  "stoneNameChangeHint": "Double-click on the stone name to change it.",
   "level": "Level",
   "xpLabel": "XP:",
   "totalXp": "Total XP",
@@ -133,5 +134,13 @@
   "sortByName": "Name",
   "loading": "Loading...",
   "noStonesAvailable": "No stones available.",
-  "listingCommission": "5% commission"
+  "listingCommission": "5% commission",
+  "helpDescription": "Grow your stones...",
+  "menuExplanationTitle": "Menu Explanation",
+  "helpMenuStorage": "In storage, you can store, review, and manage your stones.",
+  "helpMenuProfile": "The profile page shows your level, XP, and growth progress.",
+  "helpMenuCatalog": "View information about various stones in the catalog.",
+  "helpMenuMarket": "Buy and sell stones in the market.",
+  "helpMenuSettings": "Change language and adjust other game settings.",
+  "helpStoneNameHint": "Double-click on the stone name to change it."
 }

@@ -133,5 +133,14 @@
   "sortByName": "이름순",
   "loading": "로딩 중...",
   "noStonesAvailable": "판매 중인 돌이 없습니다.",
-  "listingCommission": "수수료 5% 부과"
+  "listingCommission": "수수료 5% 부과",
+  "stoneNameChangeHint": "돌 이름을 더블클릭하면 이름을 바꿀 수 있습니다.",
+  "helpDescription": "돌을 키우는 게임입니다...",
+  "menuExplanationTitle": "메뉴 설명",
+  "helpMenuStorage": "보관함에서는 사용자가 소유한 돌들을 저장, 확인 및 관리할 수 있습니다.",
+  "helpMenuProfile": "내 정보 페이지는 사용자의 레벨, 경험치 및 성장 과정을 보여줍니다.",
+  "helpMenuCatalog": "돌 도감에서는 게임에 등장하는 다양한 돌들의 정보를 확인할 수 있습니다.",
+  "helpMenuMarket": "마켓에서는 돌의 매매와 거래가 이루어집니다. 원하는 돌을 사고 팔 수 있습니다.",
+  "helpMenuSettings": "설정 페이지에서는 언어 및 기타 게임 환경을 변경할 수 있습니다.",
+  "helpStoneNameHint": "돌 이름을 더블클릭하여 이름을 변경할 수 있습니다."
 }

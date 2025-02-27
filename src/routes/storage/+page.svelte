@@ -222,7 +222,7 @@
   });
 </script>
 
-<div>
+<div class="storage-container">
   <h1>{$t('storage')}</h1>
   {#if errorMsg}
     <p style="color: red;">{errorMsg}</p>
@@ -267,6 +267,12 @@
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
 
 <style>
+  .storage-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 1rem;
+  }
+
   h1 {
     text-align: center;
     margin-bottom: 1rem;
