@@ -24,6 +24,13 @@
   let errorMsg = '';
   let stonesSubscription: RealtimeChannel;
 
+  // 각 돌의 상세 사이즈 표시 여부를 관리하는 객체
+  let detailedSizeStates: Record<string, boolean> = {};
+
+  function toggleDetailedSize(id: string) {
+    detailedSizeStates = { ...detailedSizeStates, [id]: !detailedSizeStates[id] };
+  }
+
   // 이미지 에러 핸들러 추가
   function handleImageError(e: Event) {
     const imgElement = e.target as HTMLImageElement;
@@ -241,18 +248,42 @@
               on:error={handleImageError}
             />
             <div class="stone-details">
-              <strong>{stone.name}</strong> ({$t(`stoneTypes.${stone.type}`)}) - {$t('sizeLabel')}: {stone.size.toFixed(4)} ({$t('totalGrowthTimeLabel')}: {stone.totalElapsed || 0}s)
-              <small>({$t('savedAt')}: {new Date(stone.discovered_at).toLocaleString()})</small>
+              <p class="details-line">
+                <strong style="font-size: 1.2em;">{stone.name}</strong> 
+              </p>
+              <p class="details-line">
+                <strong>{$t('typeLabel')}:</strong> {$t(`stoneTypes.${stone.type}`)}
+              </p>
+              <p class="details-line">
+                <strong>{$t('sizeLabel')}:</strong>
+                <span
+                  role="button"
+                  tabindex="0"
+                  class="detailed-size-toggle"
+                  on:click|stopPropagation|preventDefault={() => toggleDetailedSize(stone.id)}
+                  on:keydown|stopPropagation|preventDefault={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') toggleDetailedSize(stone.id);
+                  }}>
+                  {detailedSizeStates[stone.id] ? stone.size.toFixed(15) : stone.size.toFixed(4)}
+                </span>
+              </p>
+              <p class="details-line">
+                <strong>{$t('totalGrowthTimeLabel')}:</strong> {stone.totalElapsed || 0}s
+              </p>
+              <p class="details-line">
+                <strong>{$t('savedAt')}:</strong> {new Date(stone.discovered_at).toLocaleString()}
+              </p>
               {#if stone.id === $currentStone.id}
-                <span style="color: green; font-weight: bold;"> {$t('currentStoneTag')} </span>
+                <span style="color: green; font-weight: bold;"> {$t('currentStoneTag')}</span>
               {/if}
               {#if stone.market_listings && stone.market_listings.length > 0 && stone.market_listings.some(listing => listing.status === 'active')}
-                <span style="color: orange; font-weight: bold;"> {$t('marketRegistered')} </span>
+                <span style="color: orange; font-weight: bold;"> {$t('marketRegistered')}</span>
               {/if}
             </div>
           </div>
           <div class="stone-actions">
-            {#if stone.id !== $currentStone.id && !(stone.market_listings && stone.market_listings.length > 0 && stone.market_listings.some(listing => listing.status === 'active'))}
+            {#if stone.id !== $currentStone.id &&
+                 !(stone.market_listings && stone.market_listings.length > 0 && stone.market_listings.some(listing => listing.status === 'active'))}
               <button class="swap" on:click={() => swapStone(stone)}>{$t('loadButton')}</button>
               <button class="delete" on:click={() => deleteStone(stone)}>{$t('throwAwayButton')}</button>
             {/if}
@@ -364,5 +395,20 @@
     z-index: 1000;
     margin: 0;
     cursor: pointer;
+  }
+  /* 돌 사이즈 토글에 사용할 스타일 */
+  .detailed-size-toggle {
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    z-index: 9999;
+    display: inline;
+  }
+  /* 각 정보 줄의 간격을 최소화 (줄바꿈 있지만 간격 좁게) */
+  .details-line {
+    margin: 2px 0;
+    padding: 0;
+    line-height: 1.2;
+    font-size: 14px;
   }
 </style>

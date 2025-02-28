@@ -142,5 +142,6 @@
   "helpMenuCatalog": "돌 도감에서는 게임에 등장하는 다양한 돌들의 정보를 확인할 수 있습니다.",
   "helpMenuMarket": "마켓에서는 돌의 매매와 거래가 이루어집니다. 원하는 돌을 사고 팔 수 있습니다.",
   "helpMenuSettings": "설정 페이지에서는 언어 및 기타 게임 환경을 변경할 수 있습니다.",
-  "helpStoneNameHint": "돌 이름을 더블클릭하여 이름을 변경할 수 있습니다."
+  "helpStoneNameHint": "돌 이름을 더블클릭하여 이름을 변경할 수 있습니다.",
+  "stoneNameLabel": "돌 이름"
 }

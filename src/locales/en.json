@@ -52,7 +52,7 @@
   "savedAt": "Saved At",
   "currentStoneTag": "[Current Stone]",
   "loadButton": "Load",
-  "throwAwayButton": "Throw away",
+  "throwAwayButton": "Drop",
   "backButton": "Back",
   "stoneTypes": {
     "andesite": "Andesite",
@@ -142,5 +142,6 @@
   "helpMenuCatalog": "View information about various stones in the catalog.",
   "helpMenuMarket": "Buy and sell stones in the market.",
   "helpMenuSettings": "Change language and adjust other game settings.",
-  "helpStoneNameHint": "Double-click on the stone name to change it."
+  "helpStoneNameHint": "Double-click on the stone name to change it.",
+  "stoneNameLabel": "Stone Name"
 }

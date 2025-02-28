@@ -328,6 +328,14 @@
         })
       .subscribe();
   }
+
+  // 각 listing id에 대해 상세 사이즈 표시 여부를 저장할 객체
+  let detailedSizeStates: Record<string, boolean> = {};
+
+  function toggleDetailedSize(id: string) {
+    // 기존 상태를 복제하여 해당 id의 상태 값을 토글(reactivity를 위해 전체 객체 재할당)
+    detailedSizeStates = { ...detailedSizeStates, [id]: !detailedSizeStates[id] };
+  }
 </script>
 
 <div class="market-container">
@@ -406,7 +414,16 @@
               <h3>{listing.stoneName}</h3>
               <p class="stone-info">
                 <span class="stone-type">{$t(`stoneTypes.${listing.stoneType}`)}</span>
-                <span class="stone-size">{$t('size')}: {listing.stoneSize.toFixed(2)}</span>
+                <span 
+                  class="stone-size"
+                  role="button" 
+                  tabindex="0" 
+                  on:click={() => toggleDetailedSize(listing.id)}
+                  on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleDetailedSize(listing.id); }}
+                  style="cursor: pointer;"
+                >
+                  {$t('stoneSize')}: {detailedSizeStates[listing.id] ? listing.stoneSize.toFixed(15) : listing.stoneSize.toFixed(4)}
+                </span>
               </p>
               <div class="price-info">
                 {#if listing.buyNowPrice}
@@ -461,7 +478,16 @@
               <h3>{listing.stoneName}</h3>
               <p class="stone-info">
                 <span class="stone-type">{$t(`stoneTypes.${listing.stoneType}`)}</span>
-                <span class="stone-size">{$t('size')}: {listing.stoneSize.toFixed(2)}</span>
+                <span 
+                  class="stone-size"
+                  role="button" 
+                  tabindex="0" 
+                  on:click={() => toggleDetailedSize(listing.id)}
+                  on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleDetailedSize(listing.id); }}
+                  style="cursor: pointer;"
+                >
+                  {$t('stoneSize')}: {detailedSizeStates[listing.id] ? listing.stoneSize.toFixed(15) : listing.stoneSize.toFixed(4)}
+                </span>
               </p>
               <div class="price-info">
                 {#if listing.buyNowPrice}

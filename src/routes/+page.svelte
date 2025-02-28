@@ -38,6 +38,8 @@
   let attendanceMsg: string = "";
   let copyMessage: string = "";
 
+  let detailedSizeShown = false;
+
   function formatSize(num: number) {
     return num.toFixed(4);
   }
@@ -689,6 +691,13 @@
       margin-top: 0.5rem;
     }
   }
+  /* 돌 사이즈 토글에 사용할 스타일 */
+  .detailed-size-toggle {
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    z-index: 1;
+  }
 </style>
 
 <div
@@ -709,20 +718,29 @@
       />
     </div>
     <div class="stone-text">
-      <!-- 모든 플랫폼에서 더블클릭 이벤트 사용 -->
       <button
         class="stone-name"
         type="button"
         on:click|stopPropagation
         on:dblclick|stopPropagation={editStoneName}
-        on:keydown|stopPropagation={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            editStoneName();
-          }
-        }}>
+        on:keydown|stopPropagation={(e) => { if (e.key === 'Enter' || e.key === ' ') editStoneName(); }}>
         {$currentStone.name}
       </button>
-      <p>{$t('sizeLabel')}: {formatSize(computedSize)}</p>
+      <p>
+        {$t('sizeLabel')}: 
+        <span
+          role="button"
+          tabindex="0"
+          class="detailed-size-toggle"
+          on:click|stopPropagation|preventDefault={() => { detailedSizeShown = !detailedSizeShown; }}
+          on:keydown|stopPropagation|preventDefault={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              detailedSizeShown = !detailedSizeShown;
+            }
+          }}>
+          {detailedSizeShown ? computedSize.toFixed(15) : computedSize.toFixed(4)}
+        </span>
+      </p>
       <p>{$t('typeLabel')}: {$t('stoneTypes.' + $currentStone.type)}</p>
       <p>{$t('totalGrowthTimeLabel')}: {$currentStone.totalElapsed || 0}s</p>
       <p>{$t('nextStoneInLabel')}: {formatTime(countdown)}</p>

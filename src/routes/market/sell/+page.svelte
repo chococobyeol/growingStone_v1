@@ -31,7 +31,7 @@
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
-        errorMsg = '로그인이 필요합니다.';
+        errorMsg = $t('loginRequired');
         return;
       }
       
@@ -46,12 +46,12 @@
       stones = data.filter(stone => {
         if (stone.id === current.id) return false;
         return !(stone.market_listings && 
-                 stone.market_listings.some((listing: {status: string}) => listing.status === 'active'));
+                 stone.market_listings.some((listing: { status: string }) => listing.status === 'active'));
       });
       
     } catch (error) {
       console.error('내 돌 조회 오류:', error);
-      errorMsg = '돌 목록을 가져오는 중 오류가 발생했습니다.';
+      errorMsg = $t('fetchStonesError');
     } finally {
       loading = false;
     }
@@ -64,18 +64,18 @@
       successMsg = '';
       
       if (!selectedStoneId) {
-        errorMsg = "판매할 돌을 선택해주세요.";
+        errorMsg = $t('sellSelectStoneError');
         return;
       }
       
       const current = get(currentStone);
       if (selectedStoneId === current.id) {
-        errorMsg = '현재 키우고 있는 돌은 마켓에 등록할 수 없습니다.';
+        errorMsg = $t('sellCurrentStoneError');
         return;
       }
       
       if (!buyNowPrice || buyNowPrice <= 0) {
-        errorMsg = "구매 가격을 설정해야 합니다.";
+        errorMsg = $t('sellPriceError');
         return;
       }
       
@@ -93,11 +93,6 @@
         duration = 1440;
         // 돌 목록 다시 로드
         await loadMyStones();
-        
-        // 3초 후 목록 페이지로 이동
-        setTimeout(() => {
-          goto('/market');
-        }, 3000);
       } else {
         errorMsg = result.message;
       }
@@ -127,10 +122,10 @@
   {/if}
   
   {#if loading}
-    <div class="loading">판매 가능한 돌을 불러오는 중...</div>
+    <div class="loading">{$t('loading')}</div>
   {:else}
     {#if stones.length === 0}
-      <div class="empty-state">판매 가능한 돌이 없습니다.</div>
+      <div class="empty-state">{$t('noStonesAvailable')}</div>
     {:else}
       <form class="sell-form" on:submit|preventDefault={handleSubmit}>
         <div class="form-group">
@@ -138,7 +133,9 @@
           <select id="stone-select" bind:value={selectedStoneId}>
             <option value="">{$t('chooseStonePlaceholder')}</option>
             {#each stones as stone}
-              <option value={stone.id}>{stone.name} ({$t(`stoneTypes.${stone.type}`)})</option>
+              <option value={stone.id}>
+                {stone.name} ({$t(`stoneTypes.${stone.type}`)}) - {$t('sizeLabel')}: {stone.size.toFixed(15)}
+              </option>
             {/each}
           </select>
         </div>
