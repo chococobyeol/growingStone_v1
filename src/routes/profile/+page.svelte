@@ -55,33 +55,51 @@
     token = sessionData?.session?.access_token || '';
   });
 
+  // 버튼 클릭 시 확인 메시지를 띄워, 취소하면 폼 제출을 막고,
+  // 확인 시 숨겨진 'deleteConfirmed' 필드의 값을 "yes"로 변경합니다.
+  function handleConfirm(event: MouseEvent) {
+    if (!confirm($t('deleteAccountConfirmMessage'))) {
+      event.preventDefault();
+    } else {
+      const form = (event.currentTarget as HTMLButtonElement).form;
+      if (form) {
+        const input = form.querySelector('input[name="deleteConfirmed"]') as HTMLInputElement;
+        if (input) {
+          input.value = 'yes';
+        }
+      }
+    }
+  }
+
+  // 폼 제출 시 숨겨진 필드(deleteConfirmed)가 "yes"가 아니면 제출을 중단합니다.
   async function handleDelete(event: Event) {
+    const form = event.target as HTMLFormElement;
+    const input = form.querySelector('input[name="deleteConfirmed"]') as HTMLInputElement;
+    if (!input || input.value !== 'yes') {
+      event.preventDefault();
+      return false;
+    }
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.access_token) {
         errorMessage = '세션이 만료되었습니다. 다시 로그인해주세요.';
         event.preventDefault();
-        return;
+        return false;
       }
       
       token = sessionData.session.access_token;
 
-      if (!confirm($t('deleteAccountConfirmMessage') || '정말로 회원 탈퇴 하시겠습니까? 삭제 후 복구가 불가능합니다.')) {
-        event.preventDefault();
-        return;
-      }
-
-      // 자동 저장 타이머와 실시간 구독 중지
       if (typeof window !== 'undefined') {
         localStorage.removeItem('activeSession');
       }
 
-      // 클라이언트 측 로그아웃 처리
+      // 클라이언트 측 로그아웃 처리 (서버 폼 액션 호출 후)
       await supabase.auth.signOut();
     } catch (error) {
       console.error('회원 탈퇴 처리 중 오류:', error);
       errorMessage = '회원 탈퇴 처리 중 오류가 발생했습니다.';
       event.preventDefault();
+      return false;
     }
   }
 </script>
@@ -104,10 +122,12 @@
 <!-- 뒤로가기 버튼 -->
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
 
-<!-- 기존의 버튼(on:click={handleAccountDeletion}) 대신 폼을 사용 -->
+<!-- 회원탈퇴 버튼: 폼 제출 시, handleDelete와 버튼의 on:click로 확인 처리 -->
 <form method="POST" action="?/deleteAccount" use:enhance on:submit={handleDelete}>
+  <!-- 삭제 확인 결과를 전달할 숨겨진 필드 (기본값 "no") -->
+  <input type="hidden" name="deleteConfirmed" value="no" />
   <input type="hidden" name="token" value={token} />
-  <button type="submit" name="deleteAccount" value="deleteAccount" class="delete-account-btn">
+  <button type="submit" name="deleteAccount" value="deleteAccount" class="delete-account-btn" on:click={handleConfirm}>
     {$t('deleteAccount')}
   </button>
 </form>
@@ -186,17 +206,29 @@
     border: 1px solid #DDDDDD;
     border-radius: 4px;
     z-index: 1000;
-    margin: 0;
     cursor: pointer;
   }
 
   .delete-account-btn {
-    background: #ff4d4f;
+    background-color: #F88A87;
     color: #fff;
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 1.2rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
+    margin: 1rem auto;
+    display: block;
+    max-width: 300px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .delete-account-btn:hover {
+    background-color: #E27675;
+  }
+  
+  .error {
+    color: red;
+    text-align: center;
     margin-top: 1rem;
   }
 </style>

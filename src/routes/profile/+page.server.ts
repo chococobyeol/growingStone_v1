@@ -8,14 +8,16 @@ import { supabaseAdmin } from '$lib/supabaseAdminClient.server';
 */
 export const actions: Actions = {
 	deleteAccount: async ({ request, cookies }: RequestEvent) => {
-		// 폼 데이터를 가져오기
 		const formData = await request.formData();
 		const token = formData.get('token');
+		const deleteConfirmed = formData.get('deleteConfirmed');
 		if (!token || typeof token !== 'string') {
 			return fail(401, { message: '세션 정보가 없습니다.' });
 		}
+		if (deleteConfirmed !== 'yes') {
+			return fail(400, { message: '회원 탈퇴가 취소되었습니다.' });
+		}
 		
-		// Supabase Admin 클라이언트를 사용하여 사용자 정보를 조회합니다.
 		const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
 		if (userError || !user) {
 			return fail(401, { message: '로그인이 필요합니다.' });
