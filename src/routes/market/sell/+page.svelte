@@ -44,9 +44,16 @@
       
       const current = get(currentStone);
       stones = data.filter(stone => {
-        if (stone.id === current.id) return false;
-        return !(stone.market_listings && 
-                 stone.market_listings.some((listing: { status: string }) => listing.status === 'active'));
+        if (current && current.id && stone.id === current.id) {
+          return false;
+        }
+        if (
+          stone.market_listings &&
+          stone.market_listings.some((listing: { status: string }) => listing.status === 'active')
+        ) {
+          return false;
+        }
+        return true;
       });
       
     } catch (error) {
@@ -54,6 +61,46 @@
       errorMsg = $t('fetchStonesError');
     } finally {
       loading = false;
+    }
+  }
+  
+  // 현재 돌 정보를 불러와 currentStone 스토어 업데이트
+  async function loadCurrentStone() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션 로드 실패:", sessionError);
+      return;
+    }
+    if (sessionData?.session?.user) {
+      const userId = sessionData.session.user.id;
+      // 프로필에서 current_stone_id 조회
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('current_stone_id')
+        .eq('id', userId)
+        .single();
+      if (profileError || !profile || !profile.current_stone_id) {
+        console.error("프로필의 현재 돌 정보 불러오기 실패:", profileError);
+        return;
+      }
+      // current_stone_id 기준으로 돌 정보를 조회
+      const { data: stoneData, error: stoneError } = await supabase
+        .from('stones')
+        .select('*')
+        .eq('id', profile.current_stone_id)
+        .single();
+      if (stoneError || !stoneData) {
+        console.error("현재 돌 조회 실패:", stoneError);
+        return;
+      }
+      // currentStone 스토어 업데이트 (DB의 size를 baseSize로 사용)
+      currentStone.set({
+        id: stoneData.id,
+        type: stoneData.type,
+        baseSize: stoneData.size,
+        totalElapsed: stoneData.totalElapsed || 0,
+        name: stoneData.name
+      });
     }
   }
   
@@ -101,7 +148,11 @@
     }
   }
   
-  onMount(loadMyStones);
+  // onMount 시 현재 돌을 먼저 로드한 뒤 돌 목록을 불러옵니다.
+  onMount(async () => {
+    await loadCurrentStone();
+    await loadMyStones();
+  });
 </script>
 
 <div class="sell-container">

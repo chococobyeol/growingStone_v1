@@ -114,29 +114,43 @@
     }
     if (sessionData?.session?.user) {
       const userId = sessionData.session.user.id;
+      
+      // 프로필에서 current_stone_id 조회
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('current_stone_id')
+        .eq('id', userId)
+        .single();
+      if (profileError || !profile) {
+        console.error("프로필 조회 실패:", profileError);
+        await drawStoneAndSetCurrent();
+        return;
+      }
+      if (!profile.current_stone_id) {
+        await drawStoneAndSetCurrent();
+        return;
+      }
+      
+      // 프로필의 current_stone_id를 기준으로 돌 정보를 불러옴
       const { data: stoneData, error: stoneError } = await supabase
         .from('stones')
         .select('*')
-        .eq('user_id', userId)
-        .order('discovered_at', { ascending: false })
-        .limit(1);
-      if (stoneError) {
-        console.error("저장된 돌 불러오기 실패:", stoneError);
-      } else if (stoneData && stoneData.length > 0) {
-        const stoneRecord = stoneData[0];
-        const loadedStone = {
-          id: stoneRecord.id,
-          type: stoneRecord.type,
-          baseSize: stoneRecord.size,
-          totalElapsed: stoneRecord.totalElapsed || 0,
-          name: stoneRecord.name
-        };
-        currentStone.set(loadedStone);
-        computedSize = loadedStone.baseSize;
-      } else {
-        // 저장된 돌이 없으면 drawStone을 호출하여 새 돌을 뽑아 currentStone에 설정
+        .eq('id', profile.current_stone_id)
+        .single();
+      if (stoneError || !stoneData) {
+        console.error("현재 돌 조회 실패:", stoneError);
         await drawStoneAndSetCurrent();
+        return;
       }
+      const loadedStone = {
+        id: stoneData.id,
+        type: stoneData.type,
+        baseSize: stoneData.size,
+        totalElapsed: stoneData.totalElapsed || 0,
+        name: stoneData.name
+      };
+      currentStone.set(loadedStone);
+      computedSize = loadedStone.baseSize;
     }
   }
 
@@ -150,6 +164,7 @@
       console.error("로그인된 사용자가 없습니다.");
       return;
     }
+    const userId = sessionData.session.user.id;
     const randomType = stoneTypes[Math.floor(Math.random() * stoneTypes.length)];
     const newStone = {
       id: crypto.randomUUID(),
@@ -157,10 +172,9 @@
       size: 1,
       name: randomType,
       discovered_at: new Date().toISOString(),
-      user_id: sessionData.session.user.id,
+      user_id: userId,
       totalElapsed: 0
     };
-
     const { data, error } = await supabase.from('stones').insert(newStone).select();
     if (error) {
       console.error("돌 뽑기 실패:", error);
@@ -174,8 +188,16 @@
         name: createdStone.name
       });
       computedSize = createdStone.size;
-
-      // acquired_stones 테이블에도 기록
+      
+      // 프로필 업데이트: 새로 생성된 돌의 id를 current_stone_id에 저장
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ current_stone_id: createdStone.id })
+        .eq('id', userId);
+      if (profileError) {
+        console.error("프로필 업데이트 실패:", profileError);
+      }
+      
       await recordAcquiredStone(createdStone.type);
     }
   }

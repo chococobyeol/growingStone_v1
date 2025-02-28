@@ -74,6 +74,45 @@
     }
   }
 
+  async function loadCurrentStone() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션 로드 실패:", sessionError);
+      return;
+    }
+    if (sessionData?.session?.user) {
+      const userId = sessionData.session.user.id;
+      // 프로필에서 current_stone_id 조회
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('current_stone_id')
+        .eq('id', userId)
+        .single();
+      if (profileError || !profile || !profile.current_stone_id) {
+        console.error("프로필의 현재 돌 정보 불러오기 실패:", profileError);
+        return;
+      }
+      // current_stone_id를 기준으로 stones 테이블에서 돌의 상세 정보 조회
+      const { data: stoneData, error: stoneError } = await supabase
+        .from('stones')
+        .select('*')
+        .eq('id', profile.current_stone_id)
+        .single();
+      if (stoneError || !stoneData) {
+        console.error("현재 돌 조회 실패:", stoneError);
+        return;
+      }
+      // currentStone 스토어 업데이트 (DB 컬럼 size를 baseSize로 사용)
+      currentStone.set({
+        id: stoneData.id,
+        type: stoneData.type,
+        baseSize: stoneData.size,
+        totalElapsed: stoneData.totalElapsed || 0,
+        name: stoneData.name
+      });
+    }
+  }
+
   // 보관함 확장 기능 구현: 한 칸 확장할 때마다 비용이 발생 (비용 = floor(100 * 1.05^(현재칸수 - 기본칸수)))
   async function expandStorage() {
     // 확장 비용 계산
@@ -223,6 +262,7 @@
   onMount(() => {
     loadStoredStones();
     loadStorageLimit();
+    loadCurrentStone();
     window.addEventListener('keydown', handleKeydown);
     
     // 로그인한 사용자 ID 가져오기
