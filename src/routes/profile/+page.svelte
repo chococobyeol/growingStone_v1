@@ -6,6 +6,9 @@
 
   import { goto } from '$app/navigation';
   import { t } from 'svelte-i18n';
+  import { supabase } from '$lib/supabaseClient';
+  import { onMount } from 'svelte';
+  import { enhance } from '$app/forms';
 
   // 사용자 프로필 정보 변수들
   let userLevel = 1;
@@ -40,6 +43,47 @@
       currentXpProgress = userXp - baseXp;
     }
   }
+
+  // 기존 회원 탈퇴 함수(handleAccountDeletion)를 제거하고,
+  // 서버 액션 호출에 필요한 토큰을 가져오기 위한 변수 선언
+  let token = '';
+  let errorMessage = '';
+
+  // 초기 세션 정보 로딩
+  onMount(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    token = sessionData?.session?.access_token || '';
+  });
+
+  async function handleDelete(event: Event) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.access_token) {
+        errorMessage = '세션이 만료되었습니다. 다시 로그인해주세요.';
+        event.preventDefault();
+        return;
+      }
+      
+      token = sessionData.session.access_token;
+
+      if (!confirm($t('deleteAccountConfirmMessage') || '정말로 회원 탈퇴 하시겠습니까? 삭제 후 복구가 불가능합니다.')) {
+        event.preventDefault();
+        return;
+      }
+
+      // 자동 저장 타이머와 실시간 구독 중지
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('activeSession');
+      }
+
+      // 클라이언트 측 로그아웃 처리
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('회원 탈퇴 처리 중 오류:', error);
+      errorMessage = '회원 탈퇴 처리 중 오류가 발생했습니다.';
+      event.preventDefault();
+    }
+  }
 </script>
 
 <div class="profile-container">
@@ -59,6 +103,18 @@
 
 <!-- 뒤로가기 버튼 -->
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
+
+<!-- 기존의 버튼(on:click={handleAccountDeletion}) 대신 폼을 사용 -->
+<form method="POST" action="?/deleteAccount" use:enhance on:submit={handleDelete}>
+  <input type="hidden" name="token" value={token} />
+  <button type="submit" name="deleteAccount" value="deleteAccount" class="delete-account-btn">
+    {$t('deleteAccount')}
+  </button>
+</form>
+
+{#if errorMessage}
+  <p class="error">{errorMessage}</p>
+{/if}
 
 <style>
   .profile-container {
@@ -132,5 +188,15 @@
     z-index: 1000;
     margin: 0;
     cursor: pointer;
+  }
+
+  .delete-account-btn {
+    background: #ff4d4f;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 1rem;
   }
 </style>
