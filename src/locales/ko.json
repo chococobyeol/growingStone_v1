@@ -143,5 +143,15 @@
   "helpMenuMarket": "마켓에서는 돌의 매매와 거래가 이루어집니다. 원하는 돌을 사고 팔 수 있습니다.",
   "helpMenuSettings": "설정 페이지에서는 언어 및 기타 게임 환경을 변경할 수 있습니다.",
   "helpStoneNameHint": "돌 이름을 더블클릭하여 이름을 변경할 수 있습니다.",
-  "stoneNameLabel": "돌 이름"
+  "stoneNameLabel": "돌 이름",
+  "expandStorage": "보관함 확장",
+  "expandStorageConfirmPrefix": "보관함 확장 비용은 ",
+  "expandStorageConfirmSuffix": " 스톤입니다. 확장하시겠습니까?",
+  "loginRequired": "로그인이 필요합니다.",
+  "profileLoadFailed": "프로필 정보를 불러오는 데 실패했습니다.",
+  "expandStorageFailed": "보관함 확장에 실패했습니다",
+  "expandStorageSuccessPrefix": "보관함이 확장되었습니다! 이제 ",
+  "expandStorageSuccessMiddle": "칸입니다. ",
+  "expandStorageSuccessSuffix": " 스톤이 차감되었습니다.",
+  "storageFullPurchaseError": "보관함이 가득 차 있어 구매할 수 없습니다."
 }

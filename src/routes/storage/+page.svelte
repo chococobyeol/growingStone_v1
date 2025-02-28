@@ -27,6 +27,11 @@
   // 각 돌의 상세 사이즈 표시 여부를 관리하는 객체
   let detailedSizeStates: Record<string, boolean> = {};
 
+  // 보관함 슬롯 수 (프로필에 저장된 사용자의 보관함 슬롯 수)
+  let storageLimit = 0;
+  // 기본 보관함 슬롯 수 (초기값). 필요에 따라 수정 가능.
+  const BASE_STORAGE_LIMIT = 100;
+
   function toggleDetailedSize(id: string) {
     detailedSizeStates = { ...detailedSizeStates, [id]: !detailedSizeStates[id] };
   }
@@ -39,38 +44,84 @@
   }
 
   async function loadStoredStones() {
-    // 현재 인증된 사용자 가져오기
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
-    
-    if (!userId) {
-      console.error('로그인된 사용자가 없습니다');
-      return;
-    }
-    
-    console.log('현재 사용자 ID:', userId);
-    
-    // 현재 사용자의 스톤만 조회
     const { data, error } = await supabase
       .from('stones')
       .select('*, market_listings!left(id, status)')
-      .eq('user_id', userId)  // 중요: 현재 사용자의 스톤만 필터링
+      .eq('user_id', (await supabase.auth.getUser()).data?.user?.id)
       .order('discovered_at', { ascending: false });
-      
     if (error) {
       console.error('스톤 데이터 가져오기 오류:', error);
       errorMsg = error.message;
     } else {
-      console.log(`사용자 ${userId}의 스톤 ${data?.length || 0}개 로드됨`);
       storedStones = data || [];
-      
-      // 기존의 정렬 로직 유지
-      const current = get(currentStone);
-      storedStones.sort((a, b) => {
-        if (a.id === current?.id) return -1;
-        if (b.id === current?.id) return 1;
-        return new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime();
-      });
+    }
+  }
+
+  async function loadStorageLimit() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user) {
+      const userId = sessionData.session.user.id;
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('storage_limit')
+        .eq('id', userId)
+        .single();
+      if (profileError || !profile) {
+        errorMsg = '프로필 정보를 불러오는 데 실패했습니다.';
+      } else {
+        storageLimit = profile.storage_limit;
+      }
+    }
+  }
+
+  // 보관함 확장 기능 구현: 한 칸 확장할 때마다 비용이 발생 (비용 = floor(100 * 1.05^(현재칸수 - 기본칸수)))
+  async function expandStorage() {
+    // 확장 비용 계산
+    const cost = Math.floor(100 * Math.pow(1.05, (storageLimit - BASE_STORAGE_LIMIT)));
+    // TS 에러를 피하기 위해 $t의 인자 객체를 사용하지 않고 문자열을 나누어 결합합니다.
+    const confirmed = confirm(
+      `${$t('expandStorageConfirmPrefix')}${cost.toLocaleString()}${$t('expandStorageConfirmSuffix')}`
+    );
+    if (!confirmed) return;
+    
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData?.session?.user) {
+      alert($t('loginRequired'));
+      return;
+    }
+    const userId = sessionData.session.user.id;
+    
+    // 프로필에서 현재 balance와 storage_limit 조회
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('storage_limit, balance')
+      .eq('id', userId)
+      .single();
+    if (profileError || !profileData) {
+      alert($t('profileLoadFailed'));
+      return;
+    }
+    
+    if ((profileData.balance ?? 0) < cost) {
+      alert($t('insufficientBalance'));
+      return;
+    }
+    
+    const newLimit = storageLimit + 1;
+    const newBalance = profileData.balance - cost;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ storage_limit: newLimit, balance: newBalance })
+      .eq('id', userId);
+    
+    if (error) {
+      alert($t('expandStorageFailed') + ": " + error.message);
+    } else {
+      storageLimit = newLimit;
+      alert(
+        `${$t('expandStorageSuccessPrefix')}${storageLimit}${$t('expandStorageSuccessMiddle')}${cost.toLocaleString()}${$t('expandStorageSuccessSuffix')}`
+      );
     }
   }
 
@@ -171,6 +222,7 @@
 
   onMount(() => {
     loadStoredStones();
+    loadStorageLimit();
     window.addEventListener('keydown', handleKeydown);
     
     // 로그인한 사용자 ID 가져오기
@@ -231,6 +283,7 @@
 
 <div class="storage-container">
   <h1>{$t('storage')}</h1>
+  
   {#if errorMsg}
     <p style="color: red;">{errorMsg}</p>
   {/if}
@@ -292,6 +345,17 @@
       {/each}
     </ul>
   {/if}
+
+  <!-- 보관함 정보 및 확장 UI를 컨테이너 하단에 배치 -->
+  <div class="storage-info">
+    <p>
+      <img src="/assets/icons/storageicon.png" alt="보관함" class="storage-icon" />
+      {storedStones.length} / {storageLimit}
+    </p>
+    <button class="expand-storage-btn" on:click={expandStorage}>
+      {$t('expandStorage')}
+    </button>
+  </div>
 </div>
 
 <!-- 뒤로 버튼을 고정 -->
@@ -308,6 +372,39 @@
     text-align: center;
     margin-bottom: 1rem;
   }
+
+  /* 보관함 정보 UI 스타일 (컨테이너 아래쪽에 표시) */
+  .storage-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background-color: #fff;
+    border-radius: 8px;
+    border: 1px solid #DDD;
+  }
+
+  .storage-info p {
+    margin: 0;
+    font-weight: bold;
+  }
+
+  .expand-storage-btn {
+    background-color: #B7DDBF;
+    color: #000;
+    border: 1px solid #ddd;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+
+  .expand-storage-btn:hover {
+    background-color: #A3CBB1;
+  }
+
   ul {
     list-style: none;
     padding: 0;
@@ -410,5 +507,12 @@
     padding: 0;
     line-height: 1.2;
     font-size: 14px;
+  }
+  .storage-icon {
+    width: 2rem;
+    height: 2rem;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    margin-left: 0.5rem;
   }
 </style>

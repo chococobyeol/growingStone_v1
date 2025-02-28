@@ -368,112 +368,80 @@ export async function refreshStoneInventory() {
 export async function buyNow(listingId: string): Promise<{ success: boolean; message: string }> {
   try {
     console.log('즉시 구매 시도:', listingId);
-    
-    // 먼저 리스팅 정보를 조회하여 스톤 타입 정보 확보
+
+    // 1. 리스팅 정보 조회하여 구매할 돌의 아이디 확보
     const { data: listing, error: listingError } = await supabase
       .from('market_listings')
       .select('stone_id')
       .eq('id', listingId)
       .single();
-      
-    if (listingError) {
-      console.error("리스팅 정보 조회 실패:", listingError);
-      return { success: false, message: "구매 정보를 불러올 수 없습니다." };
+    if (listingError || !listing) {
+      console.error('리스팅 정보 조회 실패:', listingError);
+      return { success: false, message: '구매 정보를 불러올 수 없습니다.' };
     }
-    
-    // 스톤 정보 조회
+
+    // 2. 해당 돌의 정보를 조회 (도감 기록 등에 사용)
     const { data: stoneData, error: stoneError } = await supabase
       .from('stones')
       .select('type')
       .eq('id', listing.stone_id)
       .single();
-      
     if (stoneError) {
-      console.error("스톤 정보 조회 실패:", stoneError);
+      console.error('스톤 정보 조회 실패:', stoneError);
     }
-    
-    // 돌 유형 정보 저장
     const stoneType = stoneData?.type;
-    
-    // 구매 트랜잭션 실행
+
+    // 3. 현재 로그인한 사용자의 세션 확인
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData?.session?.user) {
+      return { success: false, message: '로그인이 필요합니다.' };
+    }
+    const userId = sessionData.session.user.id;
+
+    // 4. 보관함 체크: 프로필에서 storage_limit 조회
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('storage_limit')
+      .eq('id', userId)
+      .single();
+    if (profileError || !profile) {
+      return { success: false, message: '프로필 정보를 불러오는 데 실패했습니다.' };
+    }
+    const storageLimit = profile.storage_limit;
+
+    // 5. 현재 사용자가 보관 중인 돌 개수 조회
+    const { count, error: countError } = await supabase
+      .from('stones')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (countError) {
+      return { success: false, message: '보관 중인 돌 수를 가져오는 데 실패했습니다.' };
+    }
+    if ((count ?? 0) >= storageLimit) {
+      return { success: false, message: '보관함이 가득 차 있어 구매할 수 없습니다.' };
+    }
+
+    // 6. 구매 트랜잭션 실행 (예: RPC 함수 사용)
     const { data, error } = await supabase.rpc('buy_now_transaction', {
       listing_id: listingId
     });
-    
     if (error) {
-      console.error("즉시 구매 함수 오류:", error);
-      console.error("오류 세부 정보:", JSON.stringify(error, null, 2));
-      
-      // buyer_id 컬럼 오류인 경우 대체 방법 시도
-      if (error.code === '42703' && error.message.includes('buyer_id')) {
-        // 수동 구매 처리 시도
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData?.user?.id;
-        
-        if (!userId) {
-          return { success: false, message: "로그인이 필요합니다." };
-        }
-        
-        const { data: listing } = await supabase
-          .from('market_listings')
-          .select('*')
-          .eq('id', listingId)
-          .eq('status', 'active')
-          .single();
-          
-        if (!listing) {
-          return { success: false, message: "판매 목록을 찾을 수 없습니다." };
-        }
-        
-        // 직접 상태 변경
-        const { error: updateError } = await supabase
-          .from('market_listings')
-          .update({ 
-            status: 'sold', 
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', listingId);
-          
-        if (updateError) {
-          return { success: false, message: "구매 처리 중 오류가 발생했습니다." };
-        }
-        
-        // 성공했고 스톤 타입 정보가 있다면 도감에 기록
-        if (stoneType) {
-          try {
-            // 돌 도감에 기록 추가
-            import('$lib/stoneCatalogUtils').then(({ recordAcquiredStone }) => {
-              recordAcquiredStone(stoneType);
-            });
-          } catch (catalogError) {
-            console.error("도감 기록 추가 실패:", catalogError);
-            // 도감 기록 실패는 구매 성공에 영향을 주지 않음
-          }
-        }
-        
-        return { success: true, message: "구매가 완료되었습니다." };
-      }
-      
-      return { success: false, message: "구매 처리 중 오류가 발생했습니다." };
+      console.error('즉시 구매 함수 오류:', error);
+      return { success: false, message: '구매 처리 중 오류가 발생했습니다.' };
     }
-    
-    // 트랜잭션 성공 시 도감에 기록 추가
+
+    // 7. 트랜잭션 성공 시 (비동기로) 도감 기록 추가
     if (stoneType) {
-      try {
-        // 돌 도감에 기록 추가 (비동기로 처리하여 구매 프로세스에 영향 없도록)
-        import('$lib/stoneCatalogUtils').then(({ recordAcquiredStone }) => {
-          recordAcquiredStone(stoneType);
-        });
-      } catch (catalogError) {
-        console.error("도감 기록 추가 실패:", catalogError);
-        // 도감 기록 실패는 구매 성공에 영향을 주지 않음
-      }
+      import('$lib/stoneCatalogUtils').then(({ recordAcquiredStone }) => {
+        recordAcquiredStone(stoneType);
+      }).catch(catalogError => {
+        console.error('도감 기록 추가 실패:', catalogError);
+      });
     }
-    
-    return data || { success: true, message: "구매가 완료되었습니다." };
+    return { success: true, message: '구매가 완료되었습니다.' };
   } catch (error) {
-    console.error("즉시 구매 함수 오류:", error);
-    return { success: false, message: "구매 처리 중 오류가 발생했습니다." };
+    console.error('즉시 구매 함수 예외:', error);
+    return { success: false, message: '구매 처리 중 예외가 발생했습니다.' };
   }
 }
 

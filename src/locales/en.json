@@ -143,5 +143,15 @@
   "helpMenuMarket": "Buy and sell stones in the market.",
   "helpMenuSettings": "Change language and adjust other game settings.",
   "helpStoneNameHint": "Double-click on the stone name to change it.",
-  "stoneNameLabel": "Stone Name"
+  "stoneNameLabel": "Stone Name",
+  "expandStorage": "Expand Storage",
+  "expandStorageConfirmPrefix": "Storage expansion costs ",
+  "expandStorageConfirmSuffix": " Stone. Would you like to expand?",
+  "loginRequired": "You need to be logged in.",
+  "profileLoadFailed": "Failed to load profile information.",
+  "expandStorageFailed": "Storage expansion failed",
+  "expandStorageSuccessPrefix": "Storage expanded successfully! You now have ",
+  "expandStorageSuccessMiddle": " slots and ",
+  "expandStorageSuccessSuffix": " Stone was deducted.",
+  "storageFullPurchaseError": "Storage is full. You cannot purchase."
 }

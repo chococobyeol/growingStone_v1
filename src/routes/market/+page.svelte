@@ -17,6 +17,8 @@
   let marketSubscription: RealtimeChannel;
   let currentUserId: string | null = null;
   let processingListingId: string | null = null;
+  let showStorageAlert = false;
+  let storageAlertMsg = '';
   
   // 새로 추가: 마켓 탭 상태 (buy=구매, sell=판매)
   let marketTab = 'buy';
@@ -138,13 +140,16 @@
     if (processingListingId) return;
     
     processingListingId = listingId;
-    try {
-      await buyNow(listingId);
-      await loadMarketListings();
-    } catch (error) {
-      alert($t('purchaseError'));
-    } finally {
-      processingListingId = null;
+    const result = await buyNow(listingId);
+    processingListingId = null;
+
+    if (!result.success) {
+      // 보관함이 꽉 차 있을 때는 다국어 번역 메시지를 사용합니다.
+      if (result.message.includes('보관함이 가득 차')) {
+        alert($t('storageFullPurchaseError'));
+      } else {
+        errorMsg = result.message;
+      }
     }
   }
   
@@ -336,6 +341,11 @@
     // 기존 상태를 복제하여 해당 id의 상태 값을 토글(reactivity를 위해 전체 객체 재할당)
     detailedSizeStates = { ...detailedSizeStates, [id]: !detailedSizeStates[id] };
   }
+
+  function closeStorageAlert() {
+    showStorageAlert = false;
+    storageAlertMsg = '';
+  }
 </script>
 
 <div class="market-container">
@@ -521,6 +531,16 @@
     </button>
   </div>
 </div>
+
+<!-- 보관함 가득 참 에러에 대한 모달 알림 -->
+{#if showStorageAlert}
+  <div class="modal-overlay">
+    <div class="modal">
+      <p>{storageAlertMsg}</p>
+      <button on:click={closeStorageAlert}>{$t('close')}</button>
+    </div>
+  </div>
+{/if}
 
 <style>
   .market-container {
@@ -769,5 +789,35 @@
   .balance-display span {
     font-size: 1rem;
     line-height: 1;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .modal {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modal button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #B7DDBF;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
   }
 </style>
