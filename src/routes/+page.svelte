@@ -25,7 +25,17 @@
     'quartzite',
     'sandstone',
     'shale',
-    'tuff'
+    'tuff',
+    'chert',
+    'diorite',
+    'dolomite',
+    'gabbro',
+    'marl',
+    'obsidian',
+    'pumice',
+    'rhyolite',
+    'scoria',
+    'slate'
   ];
 
   let computedSize = 1;

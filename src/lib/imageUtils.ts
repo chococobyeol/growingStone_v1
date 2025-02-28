@@ -7,7 +7,9 @@ export function getStoneImagePath(stoneType: string | undefined): string {
   // stoneType이 유효한지 확인
   const validTypes = [
     'andesite', 'basalt', 'conglomerate', 'gneiss', 
-    'granite', 'limestone', 'quartzite', 'sandstone', 'shale', 'tuff'
+    'granite', 'limestone', 'quartzite', 'sandstone', 'shale', 'tuff',
+    'chert', 'diorite', 'dolomite', 'gabbro', 'marl', 'obsidian',
+    'pumice', 'rhyolite', 'scoria', 'slate'
   ];
   
   if (validTypes.includes(stoneType)) {

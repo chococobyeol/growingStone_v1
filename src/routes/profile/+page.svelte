@@ -9,6 +9,9 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
   import { enhance } from '$app/forms';
+  import { session } from '$lib/authStore';
+  import type { SubmitFunction } from '@sveltejs/kit';
+  import type { ActionResult } from '@sveltejs/kit';
 
   // 사용자 프로필 정보 변수들
   let userLevel = 1;
@@ -49,57 +52,55 @@
   let token = '';
   let errorMessage = '';
 
-  // 초기 세션 정보 로딩
+  // 초기 세션 정보를 불러와 최신 토큰 값을 유지합니다.
   onMount(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     token = sessionData?.session?.access_token || '';
   });
 
-  // 버튼 클릭 시 확인 메시지를 띄워, 취소하면 폼 제출을 막고,
-  // 확인 시 숨겨진 'deleteConfirmed' 필드의 값을 "yes"로 변경합니다.
-  function handleConfirm(event: MouseEvent) {
-    if (!confirm($t('deleteAccountConfirmMessage'))) {
-      event.preventDefault();
-    } else {
-      const form = (event.currentTarget as HTMLButtonElement).form;
-      if (form) {
-        const input = form.querySelector('input[name="deleteConfirmed"]') as HTMLInputElement;
-        if (input) {
-          input.value = 'yes';
-        }
-      }
-    }
-  }
+  // 버튼 클릭 시 회원 탈퇴 전 확인, 토큰 갱신, 그리고 폼 제출을 직접 처리합니다.
+  async function handleDeleteClick(event: Event) {
+    event.preventDefault();
+    errorMessage = '';
+    
+    if (!confirm($t('deleteAccountConfirmMessage'))) return;
 
-  // 폼 제출 시 숨겨진 필드(deleteConfirmed)가 "yes"가 아니면 제출을 중단합니다.
-  async function handleDelete(event: Event) {
-    const form = event.target as HTMLFormElement;
-    const input = form.querySelector('input[name="deleteConfirmed"]') as HTMLInputElement;
-    if (!input || input.value !== 'yes') {
-      event.preventDefault();
-      return false;
-    }
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw new Error(sessionError.message);
+      
       if (!sessionData?.session?.access_token) {
         errorMessage = '세션이 만료되었습니다. 다시 로그인해주세요.';
-        event.preventDefault();
-        return false;
+        return;
       }
       
       token = sessionData.session.access_token;
-
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('activeSession');
+      
+      // deleteConfirmed 값을 직접 설정하고 폼 제출
+      const formElement = document.querySelector('form') as HTMLFormElement;
+      const deleteConfirmedInput = formElement.querySelector('input[name="deleteConfirmed"]') as HTMLInputElement;
+      deleteConfirmedInput.value = 'yes';
+      
+      // 폼 데이터 직접 생성 및 전송
+      const formData = new FormData(formElement);
+      const response = await fetch('?/deleteAccount', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.message);
       }
-
-      // 클라이언트 측 로그아웃 처리 (서버 폼 액션 호출 후)
+      
+      // 성공 시 즉시 로그아웃 및 리다이렉션
       await supabase.auth.signOut();
+      localStorage.removeItem('activeSession');
+      session.set(null);
+      window.location.href = '/login';
+      
     } catch (error) {
-      console.error('회원 탈퇴 처리 중 오류:', error);
-      errorMessage = '회원 탈퇴 처리 중 오류가 발생했습니다.';
-      event.preventDefault();
-      return false;
+      errorMessage = (error as Error).message;
     }
   }
 </script>
@@ -122,12 +123,11 @@
 <!-- 뒤로가기 버튼 -->
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
 
-<!-- 회원탈퇴 버튼: 폼 제출 시, handleDelete와 버튼의 on:click로 확인 처리 -->
-<form method="POST" action="?/deleteAccount" use:enhance on:submit={handleDelete}>
-  <!-- 삭제 확인 결과를 전달할 숨겨진 필드 (기본값 "no") -->
-  <input type="hidden" name="deleteConfirmed" value="no" />
-  <input type="hidden" name="token" value={token} />
-  <button type="submit" name="deleteAccount" value="deleteAccount" class="delete-account-btn" on:click={handleConfirm}>
+<!-- 회원 탈퇴 폼: use:enhance 옵션을 통해 서버 액션 결과를 수신 -->
+<form method="POST" action="?/deleteAccount">
+  <input type="hidden" name="deleteConfirmed" value="no">
+  <input type="hidden" name="token" bind:value={token}>
+  <button type="button" class="delete-account-btn" on:click={handleDeleteClick}>
     {$t('deleteAccount')}
   </button>
 </form>

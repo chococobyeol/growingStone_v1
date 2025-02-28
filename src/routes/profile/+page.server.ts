@@ -11,6 +11,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const token = formData.get('token');
 		const deleteConfirmed = formData.get('deleteConfirmed');
+		
 		if (!token || typeof token !== 'string') {
 			return fail(401, { message: '세션 정보가 없습니다.' });
 		}
@@ -25,11 +26,12 @@ export const actions: Actions = {
 		const userId = user.id;
 		
 		try {
-			// 1) market_listings 테이블에서 판매자 또는 구매자로 등록된 건 삭제
+			// 1) market_listings 테이블 삭제
 			const { error: marketError } = await supabaseAdmin
 				.from('market_listings')
 				.delete()
-				.or(`seller_id.eq.${userId},buyer_id.eq.${userId}`);
+				.filter('seller_id', 'eq', userId)
+				.filter('buyer_id', 'eq', userId);
 			if (marketError) throw marketError;
 			
 			// 2) acquired_stones 테이블 삭제
@@ -58,12 +60,15 @@ export const actions: Actions = {
 			if (authDeletionError) throw authDeletionError;
 			
 			// 6) 쿠키 삭제 및 리다이렉트
-			cookies.delete('session', { path: '/' });
+			cookies.delete('session', { path: '/login' });
 			
-			throw redirect(302, '/login');
+			return { success: true, location: '/login' };
 		} catch (error: any) {
 			console.error('회원 탈퇴 중 에러 발생:', error);
-			return fail(500, { message: error.message || '회원 탈퇴 처리 중 오류가 발생했습니다.' });
+			return fail(500, { 
+				message: error.message || '회원 탈퇴 처리 중 오류가 발생했습니다.',
+				error: true 
+			});
 		}
 	}
 };
