@@ -332,31 +332,53 @@
       }
     })();
 
-    // 1초마다 돌 성장, xp 업데이트, 타이머 감소 로직
-    const timer = setInterval(() => {
-      currentStone.update((stone) => {
-        const oldElapsed = stone.totalElapsed || 0;
-        const deltaX = growthFactor * Math.log((oldElapsed + 2) / (oldElapsed + 1));
-        const randomFactor = 0.4 * Math.random() + 0.8;
-        const newSize = stone.baseSize + deltaX * randomFactor;
-        computedSize = newSize;
-        return { ...stone, baseSize: newSize, totalElapsed: oldElapsed + 1 };
-      });
-      autoUpdateStone();
-      updateUserXp();
+    // requestAnimationFrame을 이용한 업데이트 루프 시작
+    let lastUpdateTime = performance.now();
+    let animationFrameId: number;
 
-      if (countdown > 0) {
-        countdown--;
-        updateRemainingTime(countdown);
-        if (countdown <= 0) {
-          // 시간이 다 되면 새 돌 뽑기 후 타이머 리셋
+    function updateLoop(currentTime: number) {
+      const elapsedTime = currentTime - lastUpdateTime;
+      const elapsedSeconds = Math.floor(elapsedTime / 1000);
+
+      if (elapsedSeconds > 0) {
+        // 돌 성장 및 내부 상태 업데이트 (누락된 초 만큼 보정)
+        currentStone.update((stone) => {
+          let newSize = stone.baseSize;
+          let newTotalElapsed = stone.totalElapsed || 0;
+          for (let i = 0; i < elapsedSeconds; i++) {
+            const deltaX = growthFactor * Math.log((newTotalElapsed + 2) / (newTotalElapsed + 1));
+            const randomFactor = 0.4 * Math.random() + 0.8;
+            newSize += deltaX * randomFactor;
+            newTotalElapsed++;
+          }
+          computedSize = newSize;
+          return { ...stone, baseSize: newSize, totalElapsed: newTotalElapsed };
+        });
+
+        // DB 자동 업데이트 및 xp 계산
+        autoUpdateStone();
+        updateUserXp();
+
+        // 타이머(남은 시간) 업데이트
+        if (countdown > elapsedSeconds) {
+          countdown -= elapsedSeconds;
+          updateRemainingTime(countdown);
+        } else {
+          // 남은 시간이 다 소진되면 새 돌을 뽑고 타이머를 리셋
           drawStone().then(() => {
             countdown = 3600;
             updateRemainingTime(3600);
           });
         }
+
+        // 누락된 초 만큼을 보정해 다음 호출 기준 시각을 업데이트
+        lastUpdateTime += elapsedSeconds * 1000;
       }
-    }, 1000);
+
+      animationFrameId = requestAnimationFrame(updateLoop);
+    }
+
+    animationFrameId = requestAnimationFrame(updateLoop);
 
     // 자정 체크 타이머 설정 - setInterval 밖으로 이동
     setupMidnightCheck();
@@ -389,8 +411,9 @@
       )
       .subscribe();
 
+    // 컴포넌트 언마운트 시 requestAnimationFrame 취소와 Supabase 채널 구독 해제
     return () => {
-      clearInterval(timer);
+      cancelAnimationFrame(animationFrameId);
       supabase.removeChannel(stonesSubscription);
     };
   });

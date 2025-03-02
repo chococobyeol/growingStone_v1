@@ -27,24 +27,42 @@
   };
 
   if (data.profileData) {
-    userLevel = data.profileData.level;
+    // 누적 경험치
     userXp = data.profileData.xp;
-    
-    // userXpData 배열에서 현재 레벨의 데이터 찾기 (현재 레벨의 cumulativeXp를 기준으로 함)
-    const currentLevelData = data.userXpData.find((item: UserXpEntry) => item.level === userLevel);
-    if (currentLevelData) {
-      // 레벨이 1보다 크면 이전 레벨의 누적 xp가 baseXp가 됨 (없으면 0)
-      if (userLevel > 1) {
-        const previousLevelData = data.userXpData.find((item: UserXpEntry) => item.level === userLevel - 1);
-        baseXp = previousLevelData ? previousLevelData.cumulativeXp : 0;
-      } else {
-        baseXp = 0;
+
+    // 누적 경험치를 기반으로 레벨 계산을 수행합니다.
+    // userXpData를 레벨 순서대로 정렬 (만약 정렬되어 있지 않다면)
+    const sortedXpData = [...data.userXpData].sort((a, b) => a.level - b.level);
+
+    // 초기값 설정: 레벨 1의 경우 baseXp는 0, 필요 경험치는 레벨 1의 cumulativeXp 기준
+    let calculatedLevel = sortedXpData[0].level;
+    let baseXpCalc = 0; // 레벨 1일 경우 0
+    let requiredXp = sortedXpData[0].cumulativeXp; // 레벨 1 달성을 위한 기준 xp
+
+    // userXpData를 순회하면서, 사용자가 누적 xp 기준 어느 레벨에 해당하는지 계산합니다.
+    for (let i = 0; i < sortedXpData.length; i++) {
+      const entry = sortedXpData[i];
+      // 레벨 1의 경우에는 baseXpCalc가 그대로 0
+      if (i > 0) {
+        baseXpCalc = sortedXpData[i - 1].cumulativeXp;
       }
-      // 현재 레벨에서 다음 레벨까지 필요한 xp는 현재 레벨의 누적 xp에서 baseXp를 뺀 값
-      levelRequirement = currentLevelData.cumulativeXp - baseXp;
-      // 현재 레벨에서 획득한 xp는 전체 누적 xp에서 baseXp를 차감한 값
-      currentXpProgress = userXp - baseXp;
+      // 만약 사용자의 xp가 현재 레벨의 cumulativeXp보다 작다면, 이 레벨이 현재 사용자 레벨
+      if (userXp < entry.cumulativeXp) {
+        calculatedLevel = entry.level;
+        requiredXp = entry.cumulativeXp - baseXpCalc;
+        currentXpProgress = userXp - baseXpCalc;
+        break;
+      }
+      // 배열의 마지막 원소까지 돌았을 경우, 사용자의 xp가 가장 높은 레벨의 기준을 넘었으므로,
+      // 해당 레벨로 설정하고, 필요 경험치는 이전 레벨 기준에서 계산
+      if (i === sortedXpData.length - 1) {
+        calculatedLevel = entry.level;
+        requiredXp = entry.cumulativeXp - baseXpCalc;
+        currentXpProgress = userXp - baseXpCalc;
+      }
     }
+    userLevel = calculatedLevel;
+    levelRequirement = requiredXp;
   }
 
   // 기존 회원 탈퇴 함수(handleAccountDeletion)를 제거하고,
