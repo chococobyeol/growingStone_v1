@@ -133,6 +133,63 @@
 		clearInterval(interval);
 	  }
 	});
+
+	// active_session 업데이트 함수 추가
+	async function updateActiveSession() {
+	  const { data: sessionData, error } = await supabase.auth.getSession();
+	  if (error) {
+		console.error('세션 로드 실패:', error.message);
+		return;
+	  }
+	  if (sessionData?.session) {
+		let activeSession = localStorage.getItem('activeSession');
+		if (!activeSession) {
+		  activeSession = crypto.randomUUID();
+		  localStorage.setItem('activeSession', activeSession);
+		  const { error: updateError } = await supabase
+			.from('profiles')
+			.update({ active_session: activeSession })
+			.eq('id', sessionData.session.user.id);
+		  if (updateError) {
+			console.error("active_session 업데이트 실패:", updateError.message);
+		  }
+		}
+	  }
+	}
+
+	// 페이지 로드 시 active_session 값 업데이트 실행
+	onMount(() => {
+	  updateActiveSession();
+	  
+	  // 기존의 폴링 및 구독 로직도 함께 실행됩니다.
+	  const interval = setInterval(async () => {
+		if (user) {
+		  const { data: sessionData } = await supabase.auth.getSession();
+		  if (!sessionData?.session?.user) return;
+		  const userId = sessionData.session.user.id;
+		  const { data: profileData, error } = await supabase
+			.from('profiles')
+			.select('active_session')
+			.eq('id', userId)
+			.single();
+		  if (error) {
+			console.error("프로필의 active_session 로드 실패:", error.message);
+			return;
+		  }
+		  const newActiveSession = profileData.active_session;
+		  const localActiveSession = localStorage.getItem('activeSession');
+		  if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
+			logoutTriggered = true;
+			alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
+			logout();
+		  }
+		}
+	  }, 5000);
+
+	  return () => {
+		clearInterval(interval);
+	  };
+	});
 </script>
 
 {#if localeReady}

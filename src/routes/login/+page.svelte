@@ -39,6 +39,19 @@
         goto('/');
       }
     }
+  
+    async function handleDiscordLogin() {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          // 인증 완료 후 https://growingstone.onrender.com/으로 리디렉션됨
+          redirectTo: 'https://growingstone.onrender.com/'
+        }
+      });
+      if (error) {
+        console.error(error.message);
+      }
+    }
   </script>
   
   <div class="auth-page">
@@ -58,6 +71,8 @@
         {/if}
         <button type="submit" class="btn">{$t('login')}</button>
       </form>
+      <!-- Discord 로그인 버튼 추가 -->
+      <button on:click={handleDiscordLogin} class="btn discord-btn">{$t('loginWithDiscord')}</button>
       <p>{$t('noAccount')} <a href="/register">{$t('register')}</a></p>
     </div>
   </div>
@@ -112,6 +127,15 @@
     }
     .btn:hover {
       background-color: #A3CBB1;
+    }
+    /* Discord 로그인 버튼용 스타일 */
+    .discord-btn {
+      background-color: #7289da;
+      border: none;
+      color: #fff;
+    }
+    .discord-btn:hover {
+      background-color: #5b6eae;
     }
     .error {
       color: red;
