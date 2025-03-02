@@ -10,8 +10,30 @@
   "profile": "Profile",
   "newPassword": "New Password",
   "confirmNewPassword": "Confirm New Password",
+  "chooseStonePlaceholder": "-- Choose a stone --",
+  "selectStone": "Select Stone",
   "catalog": "Catalog",
   "market": "Market",
+  "market.createListing": {
+    "createListing": {
+      "buyNowPriceRequired": "You must enter a price.",
+      "invalidStoneOwnership": "Either you do not own this stone or the stone information could not be found.",
+      "failure": "Sale registration failed: {error}",
+      "success": "Sale registration completed successfully.",
+      "genericError": "An error occurred during sale registration: {error}"
+    },
+    "buyNow": {
+      "failure": "Failed to retrieve purchase information.",
+      "loginRequired": "You need to be logged in.",
+      "profileFailure": "Failed to load profile information.",
+      "insufficientBalance": "Insufficient balance.",
+      "storageFetchFailure": "Failed to retrieve stored stone count.",
+      "storageLimitExceeded": "The storage is full and you cannot purchase.",
+      "transactionFailure": "Purchase processing failed: {error}",
+      "success": "Purchase completed successfully.",
+      "genericError": "An error occurred during purchase processing: {error}"
+    }
+  },
   "sellStone": "Sell Stone",
   "selectStonePlaceholder": "-- Choose a stone --",
   "buyNowPrice": "Price",
@@ -30,7 +52,7 @@
   "sellStoneButton": "Sell Stone",
   "marketStoneLoadError": "Cannot load stones that are listed in the market. Cancel the listing first and try again.",
   "marketRegistered": "Market listed",
-  "marketStoneDeleteError": "Cannot discard stones that are listed in the market. Cancel the listing first and try again.",
+  "marketStoneDeleteError": "Cannot discard stones that are listed in the market. Please cancel the listing first.",
   "enterPricePlaceholder": "Enter selling price",
   "listingDuration": "Listing Duration",
   "hour": "hour",

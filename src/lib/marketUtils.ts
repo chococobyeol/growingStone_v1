@@ -1,4 +1,6 @@
 import { supabase } from '$lib/supabaseClient';
+import { get } from 'svelte/store';
+import { t } from 'svelte-i18n';
 
 // 마켓 목록 아이템 타입 정의
 export interface ListingItem {
@@ -78,6 +80,9 @@ async function updateUserBalance(userId: string, newBalance: number): Promise<bo
   return true;
 }
 
+// 다국어 처리용 헬퍼 함수 정의
+const translate = (key: string, options?: Record<string, any>) => get(t)(key, options);
+
 // 판매 등록 함수
 export async function createListing(
   stoneId: string, 
@@ -86,7 +91,7 @@ export async function createListing(
 ): Promise<{ success: boolean; message: string; listingId?: string }> {
   try {
     if (!buyNowPrice) {
-      return { success: false, message: "구매 가격을 설정해야 합니다." };
+      return { success: false, message: translate('market.createListing.buyNowPriceRequired') };
     }
     
     // 돌 소유권 확인
@@ -98,7 +103,7 @@ export async function createListing(
       .single();
     
     if (stoneError || !stone) {
-      return { success: false, message: "소유한 돌이 아니거나 존재하지 않습니다." };
+      return { success: false, message: translate('market.createListing.invalidStoneOwnership') };
     }
     
     // 현재 시간
@@ -121,19 +126,19 @@ export async function createListing(
       .single();
     
     if (error) {
-      return { success: false, message: "판매 등록 실패: " + error.message };
+      return { success: false, message: translate('market.createListing.failure', { error: error.message }) };
     }
     
     return { 
       success: true, 
-      message: "판매 등록이 완료되었습니다.", 
+      message: translate('market.createListing.success'), 
       listingId: data.id 
     };
   } catch (error) {
     console.error('판매 등록 오류:', error);
     return { 
       success: false, 
-      message: "오류가 발생했습니다: " + (error as Error).message 
+      message: translate('market.createListing.genericError', { error: (error as Error).message }) 
     };
   }
 }
@@ -195,7 +200,7 @@ export async function cancelListing(listingId: string): Promise<{ success: boole
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return { success: false, message: "로그인이 필요합니다." };
+      return { success: false, message: translate('market.cancelListing.loginRequired') };
     }
     
     // 판매 목록 조회 및 검증
@@ -207,11 +212,11 @@ export async function cancelListing(listingId: string): Promise<{ success: boole
       .single();
     
     if (listingError || !listing) {
-      return { success: false, message: "판매 목록을 찾을 수 없거나 권한이 없습니다." };
+      return { success: false, message: translate('market.cancelListing.notFoundOrUnauthorized') };
     }
     
     if (listing.status !== 'active') {
-      return { success: false, message: "이미 처리된 판매 목록입니다." };
+      return { success: false, message: translate('market.cancelListing.alreadyProcessed') };
     }
     
     // 입찰자가 있는 경우 입찰금 반환
@@ -230,12 +235,12 @@ export async function cancelListing(listingId: string): Promise<{ success: boole
       .eq('id', listingId);
     
     if (error) {
-      return { success: false, message: "판매 취소 실패: " + error.message };
+      return { success: false, message: translate('market.cancelListing.refundFailure', { error: error.message }) };
     }
     
-    return { success: true, message: "판매가 취소되었습니다." };
+    return { success: true, message: translate('market.cancelListing.success') };
   } catch (error) {
-    return { success: false, message: "오류가 발생했습니다: " + (error as Error).message };
+    return { success: false, message: translate('market.genericError', { error: (error as Error).message }) };
   }
 }
 
@@ -368,8 +373,7 @@ export async function refreshStoneInventory() {
 export async function buyNow(listingId: string): Promise<{ success: boolean; message: string }> {
   try {
     console.log('즉시 구매 시도:', listingId);
-
-    // 1. 리스팅 정보 조회하여 구매할 돌의 아이디와 구매 가격 확보
+    
     const { data: listing, error: listingError } = await supabase
       .from('market_listings')
       .select('stone_id, buy_now_price')
@@ -377,10 +381,9 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
       .single();
     if (listingError || !listing) {
       console.error('리스팅 정보 조회 실패:', listingError);
-      return { success: false, message: '구매 정보를 불러올 수 없습니다.' };
+      return { success: false, message: translate('market.buyNow.failure') };
     }
-
-    // 2. 해당 돌의 정보를 조회 (도감 기록 등에 사용)
+    
     const { data: stoneData, error: stoneError } = await supabase
       .from('stones')
       .select('type')
@@ -390,52 +393,46 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
       console.error('스톤 정보 조회 실패:', stoneError);
     }
     const stoneType = stoneData?.type;
-
-    // 3. 현재 로그인한 사용자의 세션 확인
+    
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData?.session?.user) {
-      return { success: false, message: '로그인이 필요합니다.' };
+      return { success: false, message: translate('market.buyNow.loginRequired') };
     }
     const userId = sessionData.session.user.id;
-
-    // 4. 프로필 정보 및 잔액, 보관함 한계 조회
+    
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('storage_limit, balance')
       .eq('id', userId)
       .single();
     if (profileError || !profile) {
-      return { success: false, message: '프로필 정보를 불러오는 데 실패했습니다.' };
+      return { success: false, message: translate('market.buyNow.profileFailure') };
     }
     const storageLimit = profile.storage_limit;
-
-    // 4.1 잔액 부족 검사: 구매 가격이 사용자의 잔액보다 크면 구매 진행 중단
+    
     if (profile.balance < listing.buy_now_price) {
-      return { success: false, message: '잔액이 부족합니다.' };
+      return { success: false, message: translate('market.buyNow.insufficientBalance') };
     }
-
-    // 5. 현재 사용자가 보관 중인 돌 개수 조회
+    
     const { count, error: countError } = await supabase
       .from('stones')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId);
     if (countError) {
-      return { success: false, message: '보관 중인 돌 수를 가져오는 데 실패했습니다.' };
+      return { success: false, message: translate('market.buyNow.storageFetchFailure') };
     }
     if ((count ?? 0) >= storageLimit) {
-      return { success: false, message: '보관함이 가득 차 있어 구매할 수 없습니다.' };
+      return { success: false, message: translate('market.buyNow.storageLimitExceeded') };
     }
-
-    // 6. 구매 트랜잭션 실행 (RPC 함수 사용)
+    
     const { data, error } = await supabase.rpc('buy_now_transaction', {
       listing_id: listingId
     });
     if (error) {
       console.error('즉시 구매 함수 오류:', error);
-      return { success: false, message: '구매 처리 중 오류가 발생했습니다.' };
+      return { success: false, message: translate('market.buyNow.transactionFailure') };
     }
-
-    // 7. 트랜잭션 성공 시 (비동기로) 도감 기록 추가
+    
     if (stoneType) {
       import('$lib/stoneCatalogUtils').then(({ recordAcquiredStone }) => {
         recordAcquiredStone(stoneType);
@@ -443,10 +440,10 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
         console.error('도감 기록 추가 실패:', catalogError);
       });
     }
-    return { success: true, message: '구매가 완료되었습니다.' };
+    return { success: true, message: translate('market.buyNow.success') };
   } catch (error) {
     console.error('즉시 구매 함수 예외:', error);
-    return { success: false, message: '구매 처리 중 예외가 발생했습니다.' };
+    return { success: false, message: translate('market.buyNow.genericError', { error: (error as Error).message }) };
   }
 }
 
