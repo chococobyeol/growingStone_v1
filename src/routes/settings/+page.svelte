@@ -10,8 +10,10 @@
   <p>{$t('settingsDescription')}</p>
   <div class="language-settings">
     <h2>{$t('languageSettings')}</h2>
-    <button class="btn" on:click={() => setLanguage('en')}>English</button>
-    <button class="btn" on:click={() => setLanguage('ko')}>한국어</button>
+    <div class="language-buttons">
+      <button class="btn" on:click={() => setLanguage('en')}>English</button>
+      <button class="btn" on:click={() => setLanguage('ko')}>한국어</button>
+    </div>
   </div>
 
   <div class="delete-warning-settings">
@@ -64,7 +66,25 @@
     border: 1px solid #DDDDDD;
     border-radius: 4px;
     z-index: 1000;
-    margin: 0;
     cursor: pointer;
+  }
+
+  /* 언어 버튼 그룹 스타일 */
+  .language-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .language-buttons .btn {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
   }
 </style>

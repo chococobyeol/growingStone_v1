@@ -325,17 +325,39 @@
     cursor: pointer;
   }
 
-  .delete-account-btn {
-    background-color: #F88A87;
-    color: #fff;
+  /* 비밀번호 변경 버튼의 공통 스타일 */
+  .btn {
+    background-color: #B7DDBF;
+    color: #000;
+    border: 1px solid #ddd;
     padding: 0.6rem 1.2rem;
-    border: none;
     border-radius: 5px;
     cursor: pointer;
     margin: 1rem auto;
     display: block;
     max-width: 300px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  
+  .btn:hover {
+    background-color: #A3CBB1;
+  }
+  
+  /* 회원탈퇴 버튼 스타일:
+     - 배경색: #F88A87 (유지)
+     - 글자색: 검은색 (#000)
+     - 테두리: 1px solid #ddd */
+  .delete-account-btn {
+    background-color: #F88A87;
+    color: #000;  /* 글자색을 검은색으로 변경 */
+    border: 1px solid #ddd; /* 테두리 색상 */
+    padding: 0.6rem 1.2rem;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 1rem auto;
+    display: block;
+    max-width: 300px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
   
   .delete-account-btn:hover {
@@ -416,23 +438,6 @@
     width: 100%;
     padding: 0.75rem;
     box-sizing: border-box;
-  }
-
-  .btn {
-    background-color: #B7DDBF;
-    color: #000;
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin: 1rem auto;
-    display: block;
-    max-width: 300px;
-    transition: background-color 0.3s ease;
-  }
-
-  .btn:hover {
-    background-color: #A0C0A3;
   }
 
   .success {
