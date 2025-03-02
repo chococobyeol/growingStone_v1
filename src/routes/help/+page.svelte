@@ -20,6 +20,12 @@
 <!-- 보관함, 설정창과 동일한 스타일의 뒤로가기 버튼 -->
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
 
+<footer class="help-footer">
+  <a href="/privacy-policy">
+    {$t('privacyPolicy')}
+  </a>
+</footer>
+
 <style>
   .help-container {
     max-width: 600px;
@@ -66,6 +72,23 @@
     border-radius: 4px;
     z-index: 1000;
     margin: 0;
+    cursor: pointer;
+  }
+  
+  .help-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    padding: 1rem 0;
+    text-align: center;
+    z-index: 900;
+  }
+  
+  .help-footer a {
+    text-decoration: none;
+    color: #000;
     cursor: pointer;
   }
 </style>
