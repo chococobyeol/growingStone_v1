@@ -70,10 +70,29 @@
   let token = '';
   let errorMessage = '';
 
-  // 초기 세션 정보를 불러와 최신 토큰 값을 유지합니다.
+  // 새 변수: 비밀번호 변경 모달 표시 여부
+  let showPasswordModal = false;
+
+  // 이메일/비밀번호 방식 가입자 여부, newPassword, confirmNewPassword, passwordError, passwordSuccess 등 기존 변수들은 그대로 유지합니다.
+  let isEmailUser = false;
+  let newPassword = '';
+  let confirmNewPassword = '';
+  let passwordError = '';
+  let passwordSuccess = '';
+
+  // 기존 onMount에서 세션 정보를 통해 isEmailUser 값을 판별합니다.
   onMount(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     token = sessionData?.session?.access_token || '';
+    if (sessionData?.session?.user) {
+      const user = sessionData.session.user;
+      if (user.identities && user.identities.length > 0) {
+        isEmailUser = user.identities[0].provider === 'email';
+      } else {
+        // provider 정보가 없으면 기본적으로 email 사용자로 가정합니다.
+        isEmailUser = true;
+      }
+    }
   });
 
   // 버튼 클릭 시 회원 탈퇴 전 확인, 토큰 갱신, 그리고 폼 제출을 직접 처리합니다.
@@ -121,6 +140,35 @@
       errorMessage = (error as Error).message;
     }
   }
+
+  // 비밀번호 변경 함수
+  async function handlePasswordChange(event: Event) {
+    event.preventDefault();
+    passwordError = '';
+    passwordSuccess = '';
+
+    if (newPassword !== confirmNewPassword) {
+      passwordError = $t('passwordMismatch');
+      return;
+    }
+    if (newPassword.length < 6) {
+      passwordError = $t('passwordTooShort');
+      return;
+    }
+
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (error) {
+      passwordError = error.message;
+    } else {
+      passwordSuccess = $t('passwordChangeSuccess');
+      newPassword = '';
+      confirmNewPassword = '';
+      // 모달 닫기
+      showPasswordModal = false;
+    }
+  }
 </script>
 
 <div class="profile-container">
@@ -141,6 +189,11 @@
 <!-- 뒤로가기 버튼 -->
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
 
+<!-- 이메일 로그인 사용자인 경우에만 비밀번호 변경 버튼 표시 -->
+{#if isEmailUser}
+  <button class="btn" on:click={() => showPasswordModal = true}>{$t('changePassword')}</button>
+{/if}
+
 <!-- 회원 탈퇴 폼: use:enhance 옵션을 통해 서버 액션 결과를 수신 -->
 <form method="POST" action="?/deleteAccount">
   <input type="hidden" name="deleteConfirmed" value="no">
@@ -149,6 +202,51 @@
     {$t('deleteAccount')}
   </button>
 </form>
+
+<!-- 모달 창: 사용자가 버튼을 누르면 나타납니다. -->
+{#if showPasswordModal}
+  <div class="modal-wrapper">
+    <!-- 전체 화면을 덮는 버튼(오버레이) -->
+    <button
+      type="button"
+      class="modal-overlay"
+      on:click={() => (showPasswordModal = false)}
+    >
+      <span class="sr-only">{$t('closeModal')}</span>
+    </button>
+    <!-- 모달 창 내용 -->
+    <div class="modal-content" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        class="modal-close-btn"
+        on:click={() => (showPasswordModal = false)}
+      >
+        ×
+      </button>
+      {#if isEmailUser}
+        <form on:submit|preventDefault={handlePasswordChange}>
+          <div class="input-group">
+            <label for="newPassword">{$t('newPassword')}</label>
+            <input id="newPassword" type="password" bind:value={newPassword} required />
+          </div>
+          <div class="input-group">
+            <label for="confirmNewPassword">{$t('confirmNewPassword')}</label>
+            <input id="confirmNewPassword" type="password" bind:value={confirmNewPassword} required />
+          </div>
+          {#if passwordError}
+            <p class="error">{passwordError}</p>
+          {/if}
+          {#if passwordSuccess}
+            <p class="success">{passwordSuccess}</p>
+          {/if}
+          <button type="submit" class="btn">{$t('changePassword')}</button>
+        </form>
+      {:else}
+        <p>{$t('passwordChangeUnavailable')}</p>
+      {/if}
+    </div>
+  </div>
+{/if}
 
 {#if errorMessage}
   <p class="error">{errorMessage}</p>
@@ -246,6 +344,99 @@
   
   .error {
     color: red;
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  .modal-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1100;
+  }
+
+  .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    cursor: pointer;
+  }
+
+  .modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    z-index: 1110;
+    width: 350px;
+    max-width: 90%;
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .input-group {
+    margin-bottom: 1rem;
+  }
+
+  .input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: 0.75rem;
+    box-sizing: border-box;
+  }
+
+  .btn {
+    background-color: #B7DDBF;
+    color: #000;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 1rem auto;
+    display: block;
+    max-width: 300px;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn:hover {
+    background-color: #A0C0A3;
+  }
+
+  .success {
+    color: green;
     text-align: center;
     margin-top: 1rem;
   }
