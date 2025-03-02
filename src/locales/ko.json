@@ -225,7 +225,7 @@
   "expandStorageSuccessMiddle": "칸입니다. ",
   "expandStorageSuccessSuffix": " 스톤이 차감되었습니다.",
   "storageFullPurchaseError": "보관함이 가득 차 있어 구매할 수 없습니다.",
-  "privacyPolicy": "개인정보 처리 방침",
+  "privacyPolicy": "개인정보처리방침",
   "privacySection1Title": "1. 개인정보의 수집 및 이용 목적",
   "privacySection1Content": "본 웹사이트는 회원 관리 및 서비스 제공을 위해 개인정보를 수집 및 이용합니다.",
   "privacySection1ListItem1": "회원 가입 및 인증",

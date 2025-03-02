@@ -11,7 +11,7 @@
     <li><strong>{$t('storage')}:</strong> {$t('helpMenuStorage')}</li>
     <li><strong>{$t('profile')}:</strong> {$t('helpMenuProfile')}</li>
     <li><strong>{$t('catalog')}:</strong> {$t('helpMenuCatalog')}</li>
-    <li><strong>{$t('market')}:</strong> {$t('helpMenuMarket')}</li>
+    <li><strong>{$t('market.label')}:</strong> {$t('helpMenuMarket')}</li>
     <li><strong>{$t('settings')}:</strong> {$t('helpMenuSettings')}</li>
   </ul>
   <p>{$t('helpStoneNameHint')}</p>
