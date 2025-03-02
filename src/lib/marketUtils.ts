@@ -369,10 +369,10 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
   try {
     console.log('즉시 구매 시도:', listingId);
 
-    // 1. 리스팅 정보 조회하여 구매할 돌의 아이디 확보
+    // 1. 리스팅 정보 조회하여 구매할 돌의 아이디와 구매 가격 확보
     const { data: listing, error: listingError } = await supabase
       .from('market_listings')
-      .select('stone_id')
+      .select('stone_id, buy_now_price')
       .eq('id', listingId)
       .single();
     if (listingError || !listing) {
@@ -398,16 +398,21 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
     }
     const userId = sessionData.session.user.id;
 
-    // 4. 보관함 체크: 프로필에서 storage_limit 조회
+    // 4. 프로필 정보 및 잔액, 보관함 한계 조회
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('storage_limit')
+      .select('storage_limit, balance')
       .eq('id', userId)
       .single();
     if (profileError || !profile) {
       return { success: false, message: '프로필 정보를 불러오는 데 실패했습니다.' };
     }
     const storageLimit = profile.storage_limit;
+
+    // 4.1 잔액 부족 검사: 구매 가격이 사용자의 잔액보다 크면 구매 진행 중단
+    if (profile.balance < listing.buy_now_price) {
+      return { success: false, message: '잔액이 부족합니다.' };
+    }
 
     // 5. 현재 사용자가 보관 중인 돌 개수 조회
     const { count, error: countError } = await supabase
@@ -421,7 +426,7 @@ export async function buyNow(listingId: string): Promise<{ success: boolean; mes
       return { success: false, message: '보관함이 가득 차 있어 구매할 수 없습니다.' };
     }
 
-    // 6. 구매 트랜잭션 실행 (예: RPC 함수 사용)
+    // 6. 구매 트랜잭션 실행 (RPC 함수 사용)
     const { data, error } = await supabase.rpc('buy_now_transaction', {
       listing_id: listingId
     });
