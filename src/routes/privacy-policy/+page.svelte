@@ -22,6 +22,11 @@
     <ul>
       <li>{$t('privacySection2ListItem1')}</li>
     </ul>
+    <p>{$t('privacySection2DiscordContent')}</p>
+    <ul>
+      <li>{$t('privacySection2DiscordListItem1')}</li>
+      <li>{$t('privacySection2DiscordListItem2')}</li>
+    </ul>
     <p>{$t('privacySection2Content2')}</p>
     <ul>
       <li>{$t('privacySection2ListItem2')}</li>
