@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-  import { currentStone } from '$lib/stoneStore';
+  import { currentStone, getRandomStoneType } from '$lib/stoneStore';
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
   import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -15,28 +15,6 @@
    * 1) 돌 정보 & 성장 로직
    * ===================== */
   const growthFactor = 1.0; // k 값
-  const stoneTypes = [
-    'andesite',
-    'basalt',
-    'conglomerate',
-    'gneiss',
-    'granite',
-    'limestone',
-    'quartzite',
-    'sandstone',
-    'shale',
-    'tuff',
-    'chert',
-    'diorite',
-    'dolomite',
-    'gabbro',
-    'marl',
-    'obsidian',
-    'pumice',
-    'rhyolite',
-    'scoria',
-    'slate'
-  ];
 
   let computedSize = 1;
   // countdown은 DB에 저장된 remaining_time 값을 사용 (초 단위)
@@ -65,7 +43,7 @@
   }
 
   function randomizeStone() {
-    const randomType = stoneTypes[Math.floor(Math.random() * stoneTypes.length)];
+    const randomType = getRandomStoneType();
     currentStone.update((stone) => ({
       ...stone,
       type: randomType,
@@ -165,7 +143,7 @@
       return;
     }
     const userId = sessionData.session.user.id;
-    const randomType = stoneTypes[Math.floor(Math.random() * stoneTypes.length)];
+    const randomType = getRandomStoneType();
     const newStone = {
       id: crypto.randomUUID(),
       type: randomType,
@@ -485,7 +463,7 @@
       console.error("로그인된 사용자가 없습니다.");
       return;
     }
-    const randomType = stoneTypes[Math.floor(Math.random() * stoneTypes.length)];
+    const randomType = getRandomStoneType();
     const newStone = {
       id: crypto.randomUUID(),
       type: randomType,
