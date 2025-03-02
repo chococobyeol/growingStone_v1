@@ -9,7 +9,9 @@ export function getStoneImagePath(stoneType: string | undefined): string {
     'andesite', 'basalt', 'conglomerate', 'gneiss', 
     'granite', 'limestone', 'quartzite', 'sandstone', 'shale', 'tuff',
     'chert', 'diorite', 'dolomite', 'gabbro', 'marl', 'obsidian',
-    'pumice', 'rhyolite', 'scoria', 'slate'
+    'pumice', 'rhyolite', 'scoria', 'slate',
+    // 오늘 추가한 돌 타입들
+    'agate', 'calcite', 'feldspar', 'marble', 'mica', 'pegmatite', 'pyrite', 'quartz', 'sapphire', 'schist'
   ];
   
   if (validTypes.includes(stoneType)) {
