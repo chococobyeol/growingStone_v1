@@ -349,7 +349,7 @@
 </script>
 
 <div class="market-container">
-  <h1>{$t('market')}</h1>
+  <h1>{$t('market.label')}</h1>
   
   <!-- 탭 스위처 -->
   <div class="tab-switcher">

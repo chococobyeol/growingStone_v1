@@ -795,8 +795,8 @@
           <span class="btn-label">{$t('catalog')}</span>
         </button>
         <button class="btn icon-text-btn" on:click={() => goto('/market')}>
-          <img src="/assets/icons/market.png" alt="{$t('market')}" />
-          <span class="btn-label">{$t('market')}</span>
+          <img src="/assets/icons/market.png" alt="{$t('market.label')}" />
+          <span class="btn-label">{$t('market.label')}</span>
         </button>
         <div class="balance-display">
           <img

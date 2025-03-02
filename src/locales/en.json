@@ -13,8 +13,8 @@
   "chooseStonePlaceholder": "-- Choose a stone --",
   "selectStone": "Select Stone",
   "catalog": "Catalog",
-  "market": "Market",
-  "market.createListing": {
+  "market": {
+    "label": "Market",
     "createListing": {
       "buyNowPriceRequired": "You must enter a price.",
       "invalidStoneOwnership": "Either you do not own this stone or the stone information could not be found.",
