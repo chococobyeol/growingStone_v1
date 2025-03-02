@@ -202,7 +202,6 @@
   "privacySection1ListItem1": "Member registration and authentication",
   "privacySection1ListItem2": "Analysis of service usage records",
   "privacySection1ListItem3": "Other purposes for smooth service provision",
-  
   "privacySection2Title": "2. Collected Personal Information Items",
   "privacySection2Content1": "The following information may be collected during member registration and login:",
   "privacySection2ListItem1": "Email address",
@@ -210,15 +209,11 @@
   "privacySection2ListItem2": "IP address",
   "privacySection2ListItem3": "Service usage records",
   "privacySection2ListItem4": "Cookies and local storage data",
-  
   "privacySection3Title": "3. Storage and Retention Period of Personal Information",
   "privacySection3ListItem1": "Member information: until account deletion",
-  "privacySection3ListItem2": "Service usage records: 3 years",
   "privacySection3Content": "The collected personal information is securely stored in the Supabase database.",
-  
   "privacySection4Title": "4. Third-Party Provision and Consignment",
   "privacySection4Content": "This website does not provide member information to third parties or outsource processing.",
-  
   "privacySection5Title": "5. User Rights and How to Exercise Them",
   "privacySection5Content": "Users can exercise the following rights:",
   "privacySection5ListItem1": "Request to view personal information",
@@ -226,10 +221,8 @@
   "privacySection5ListItem3": "Request deletion",
   "privacySection5ListItem4": "Request to suspend processing",
   "privacySection5Content2": "These rights can be exercised by contacting the Data Protection Officer via email.",
-  
   "privacySection6Title": "6. Data Protection Officer",
   "privacySection6Name": "Growstone",
   "privacySection6Email": "Email: chococobyeol@gmail.com",
-  
   "privacySection7Content": "This Privacy Policy will be effective as of March 2, 2025."
 }

@@ -202,7 +202,6 @@
   "privacySection1ListItem1": "회원 가입 및 인증",
   "privacySection1ListItem2": "서비스 이용 기록 분석",
   "privacySection1ListItem3": "원활한 서비스 제공",
-  
   "privacySection2Title": "2. 수집하는 개인정보의 항목",
   "privacySection2Content1": "회원 가입 및 로그인 시 다음과 같은 정보가 수집될 수 있습니다:",
   "privacySection2ListItem1": "이메일 주소",
@@ -210,15 +209,11 @@
   "privacySection2ListItem2": "IP 주소",
   "privacySection2ListItem3": "서비스 이용 기록",
   "privacySection2ListItem4": "쿠키 및 로컬스토리지 데이터",
-  
   "privacySection3Title": "3. 개인정보의 보관 및 보유기간",
   "privacySection3ListItem1": "회원 정보: 회원 탈퇴 시까지",
-  "privacySection3ListItem2": "서비스 이용 기록: 3년",
   "privacySection3Content": "수집된 개인정보는 Supabase 데이터베이스에 안전하게 저장됩니다.",
-  
   "privacySection4Title": "4. 제3자 제공 및 처리 위탁",
   "privacySection4Content": "본 웹사이트는 회원 정보를 제3자에게 제공하거나 처리 위탁하지 않습니다.",
-  
   "privacySection5Title": "5. 이용자의 권리와 행사 방법",
   "privacySection5Content": "이용자는 다음과 같은 권리를 행사할 수 있습니다:",
   "privacySection5ListItem1": "개인정보 열람 요청",
@@ -226,10 +221,8 @@
   "privacySection5ListItem3": "삭제 요청",
   "privacySection5ListItem4": "처리 정지 요청",
   "privacySection5Content2": "위 권리 행사는 개인정보 보호책임자에게 이메일로 요청하실 수 있습니다.",
-  
   "privacySection6Title": "6. 개인정보 보호책임자",
   "privacySection6Name": "돌 키우기",
   "privacySection6Email": "이메일: chococobyeol@gmail.com",
-  
   "privacySection7Content": "본 개인정보 처리 방침은 2025년 3월 2일부터 적용됩니다."
 }

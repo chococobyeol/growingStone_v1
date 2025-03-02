@@ -34,7 +34,6 @@
     <h2>{$t('privacySection3Title')}</h2>
     <ul>
       <li>{$t('privacySection3ListItem1')}</li>
-      <li>{$t('privacySection3ListItem2')}</li>
     </ul>
     <p>{$t('privacySection3Content')}</p>
   </section>
