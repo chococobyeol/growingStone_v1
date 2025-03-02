@@ -23,7 +23,7 @@ export async function loadUserXpData() {
 }
 
 // 매 초마다 호출하여 사용자 XP를 갱신하는 함수
-export async function updateUserXp() {
+export async function updateUserXp(elapsedSeconds: number = 1) {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) {
     console.error('세션 로드 실패:', sessionError);
@@ -49,8 +49,8 @@ export async function updateUserXp() {
   let currentXp = profileData?.xp || 0;
   let currentLevel = profileData?.level || 1;
   
-  // 원하는 만큼 xp 증가 (예시에서는 1xp씩 증가)
-  currentXp += 1;
+  // 경과된 초만큼 xp를 증가시킵니다.
+  currentXp += elapsedSeconds;
   
   // CSV 데이터를 통해 현재 레벨의 임계치 정보를 가져와 레벨업 체크
   let newLevel = currentLevel;

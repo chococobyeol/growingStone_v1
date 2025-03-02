@@ -333,10 +333,10 @@
           return { ...stone, baseSize: newSize, totalElapsed: newTotalElapsed };
         });
 
-        // DB 자동 업데이트 및 xp 계산
+        // DB 자동 업데이트 및 xp 계산 (경과된 초만큼 xp 증가)
         autoUpdateStone();
-        updateUserXp();
-
+        updateUserXp(elapsedSeconds);
+        
         // 타이머(남은 시간) 업데이트
         if (countdown > elapsedSeconds) {
           countdown -= elapsedSeconds;
