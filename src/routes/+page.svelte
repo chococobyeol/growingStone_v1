@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import { currentStone, getRandomStoneType } from '$lib/stoneStore';
@@ -285,29 +285,59 @@
   let stonesSubscription: RealtimeChannel;
 
   onMount(() => {
-    loadUserStone();
+    // -----------------------
+    // Active Session 관리 로직
+    // -----------------------
+    let myActiveSession = localStorage.getItem('activeSession');
+    if (!myActiveSession) {
+      myActiveSession = crypto.randomUUID();
+      localStorage.setItem('activeSession', myActiveSession);
+      updateActiveSessionInProfile(myActiveSession);
+    }
 
-    // 출석 체크 후 다국어 메시지를 인스턴스 메시지로 표시
-    (async () => {
-      const attendanceRes = await checkAttendance();
-      if (attendanceRes.message) {
-        attendanceMsg = get(t)(attendanceRes.message);
-        setTimeout(() => {
-          attendanceMsg = "";
-        }, 3000);
+    function storageHandler(e: StorageEvent) {
+      // 만약 다른 탭에서 activeSession 값이 제거되었다면, 현재 탭이 보이는 상태일 때 takeover
+      if (e.key === 'activeSession' && e.newValue === null) {
+        if (!document.hidden) {
+          myActiveSession = crypto.randomUUID();
+          localStorage.setItem('activeSession', myActiveSession);
+          updateActiveSessionInProfile(myActiveSession);
+        }
       }
-      await loadBalance();
-    })();
+    }
+    window.addEventListener('storage', storageHandler);
 
-    // DB에서 남은 시간을 로드. 값이 없거나 0 이하이면 3600초(1시간)로 초기화.
-    (async () => {
-      const dbRemaining = await loadRemainingTime();
-      if (dbRemaining === null || dbRemaining <= 0) {
-        countdown = 3600;
-        updateRemainingTime(3600);
-      } else {
-        countdown = dbRemaining;
+    function beforeUnloadHandler() {
+      // 현재 탭이 activeSession을 보유 중이라면, 탭 종료 시 제거
+      if (localStorage.getItem('activeSession') === myActiveSession) {
+        localStorage.removeItem('activeSession');
       }
+    }
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+    // -----------------------
+
+    // onMount 콜백은 동기 함수로 작성하고 내부에서 async IIFE로 비동기 작업 수행
+    (async () => {
+      await loadUserStone();
+      (async () => {
+        const attendanceRes = await checkAttendance();
+        if (attendanceRes.message) {
+          attendanceMsg = get(t)(attendanceRes.message);
+          setTimeout(() => {
+            attendanceMsg = "";
+          }, 3000);
+        }
+        await loadBalance();
+      })();
+      (async () => {
+        const dbRemaining = await loadRemainingTime();
+        if (dbRemaining === null || dbRemaining <= 0) {
+          countdown = 3600;
+          updateRemainingTime(3600);
+        } else {
+          countdown = dbRemaining;
+        }
+      })();
     })();
 
     // requestAnimationFrame을 이용한 업데이트 루프 시작
@@ -393,6 +423,8 @@
     return () => {
       cancelAnimationFrame(animationFrameId);
       supabase.removeChannel(stonesSubscription);
+      window.removeEventListener('storage', storageHandler);
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
     };
   });
 
@@ -499,6 +531,27 @@
     imgElement.src = getDefaultImagePath();
     imgElement.onerror = null; // 무한 루프 방지
   }
+
+  // ------------------------------------------------------------------
+  // active session 업데이트 함수: 프로필의 active_session 컬럼 갱신
+  async function updateActiveSessionInProfile(activeSession: string) {
+    const { data: sessionData, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('세션 로드 실패:', error.message);
+      return;
+    }
+    if (sessionData?.session?.user) {
+      const userId = sessionData.session.user.id;
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ active_session: activeSession })
+        .eq('id', userId);
+      if (updateError) {
+        console.error('active_session 업데이트 실패:', updateError.message);
+      }
+    }
+  }
+  // ------------------------------------------------------------------
 </script>
 
 <style>
