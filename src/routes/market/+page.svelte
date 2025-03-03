@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { t, locale } from 'svelte-i18n';
   import { supabase } from '$lib/supabaseClient';
-  import { getActiveListings, getMyListings, checkExpiredListings, buyNow, cancelListing } from '$lib/marketUtils';
+  import { getActiveListings, getMyListings, buyNow, cancelListing } from '$lib/marketUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import type { ListingItem } from '$lib/marketUtils';
   import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -58,10 +58,13 @@
     loading = true;
     errorMsg = '';
     try {
-      // 먼저 만료된 목록 처리
-      await checkExpiredListings();
-      
-      // 그 다음 목록 로딩
+      // 기존의 checkExpiredListings() 호출 대신,
+      // 관리자 권한으로 만료된 항목을 처리하는 API 엔드포인트 호출
+      const response = await fetch('/api/expired-listings');
+      const result = await response.json();
+      console.log('만료된 항목 처리 결과:', result);
+
+      // 그 다음, 목록 로딩
       listings = await getActiveListings({
         sortBy: selectedSortBy as any,
       });
@@ -286,14 +289,14 @@
   // 데이터 갱신 함수 (별도로 분리)
   async function refreshListingsData() {
     try {
-      // 만료된 목록 체크
-      await checkExpiredListings();
-      
+      // 관리자 권한을 사용하는 API 엔드포인트 호출
+      const response = await fetch('/api/expired-listings');
+      const result = await response.json();
+      console.log('관리자 만료 업데이트 결과:', result);
+
       // 현재 탭에 따라 데이터 갱신
       if (marketTab === 'buy') {
-        const newListings = await getActiveListings({
-          sortBy: selectedSortBy as any,
-        });
+        const newListings = await getActiveListings({ sortBy: selectedSortBy as any });
         listings = newListings;
       } else if (marketTab === 'sell') {
         const newMyListings = await getMyListings();
