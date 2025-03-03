@@ -11,6 +11,7 @@
   import { recordAcquiredStone } from '$lib/stoneCatalogUtils';
   import { checkAttendance } from '$lib/attendanceUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
+  import { isPrimary } from '$lib/activeSessionManager';
 
   /* =====================
    * 1) 돌 정보 & 성장 로직
@@ -292,14 +293,14 @@
     // Active Session 관리 로직
     // -----------------------
     let myActiveSession = localStorage.getItem('activeSession');
-    if (!myActiveSession) {
+    if (!myActiveSession && get(isPrimary)) {
       myActiveSession = crypto.randomUUID();
       localStorage.setItem('activeSession', myActiveSession);
       updateActiveSessionInProfile(myActiveSession);
     }
 
     function storageHandler(e: StorageEvent) {
-      if (e.key === 'activeSession' && e.newValue === null) {
+      if (e.key === 'activeSession' && e.newValue === null && get(isPrimary)) {
         if (!document.hidden) {
           myActiveSession = crypto.randomUUID();
           localStorage.setItem('activeSession', myActiveSession);
@@ -322,8 +323,8 @@
       // 페이지 종료 시 동기적으로 데이터 전송
       navigator.sendBeacon('/api/saveStoneState', payload);
 
-      // 기존 activeSession 정리 로직
-      if (localStorage.getItem('activeSession') === myActiveSession) {
+      // primary 창일 때만 activeSession 제거
+      if (get(isPrimary) && localStorage.getItem('activeSession') === myActiveSession) {
         localStorage.removeItem('activeSession');
       }
     }
@@ -357,6 +358,12 @@
     let lastUpdateTime = performance.now();
     let animationFrameId: number;
     function updateLoop(currentTime: number) {
+      // primary 창이 아닌 경우, 업데이트 로직을 수행하지 않고 다음 프레임 요청
+      if (!get(isPrimary)) {
+        animationFrameId = requestAnimationFrame(updateLoop);
+        return;
+      }
+
       const elapsedTime = currentTime - lastUpdateTime;
       const elapsedSeconds = Math.floor(elapsedTime / 1000);
       if (elapsedSeconds > 0) {

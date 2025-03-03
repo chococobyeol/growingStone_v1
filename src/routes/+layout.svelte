@@ -9,6 +9,8 @@
 	import { t } from 'svelte-i18n';
 	import { setLanguage } from '$lib/i18n';
 	import { goto } from '$app/navigation';
+	import { isPrimary } from '$lib/activeSessionManager';
+	import { get } from 'svelte/store';
   
 	let localeReady = false;
 	// 번역 리소스 로딩 완료될 때까지 기다립니다.
@@ -106,7 +108,7 @@
 	// 추가: 폴링 기능을 통해 주기적으로 active_session 값을 체크
 	onMount(() => {
 	  const interval = setInterval(async () => {
-		if (user) {
+		if (user && get(isPrimary)) {
 		  const { data: sessionData } = await supabase.auth.getSession();
 		  if (!sessionData?.session?.user) return;
 		  const userId = sessionData.session.user.id;
@@ -127,7 +129,7 @@
 			logout();
 		  }
 		}
-	  }, 5000); // 5초마다 체크
+	  }, 5000);
 
 	  return () => {
 		clearInterval(interval);
@@ -163,7 +165,7 @@
 	  
 	  // 기존의 폴링 및 구독 로직도 함께 실행됩니다.
 	  const interval = setInterval(async () => {
-		if (user) {
+		if (user && get(isPrimary)) {
 		  const { data: sessionData } = await supabase.auth.getSession();
 		  if (!sessionData?.session?.user) return;
 		  const userId = sessionData.session.user.id;
