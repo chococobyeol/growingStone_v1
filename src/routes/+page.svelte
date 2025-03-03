@@ -5,6 +5,7 @@
   import { currentStone, getRandomStoneType } from '$lib/stoneStore';
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
+  import { beforeNavigate } from '$app/navigation';
   import type { RealtimeChannel } from '@supabase/supabase-js';
   import { updateUserXp } from '$lib/xpUtils';
   import { recordAcquiredStone } from '$lib/stoneCatalogUtils';
@@ -296,7 +297,6 @@
     }
 
     function storageHandler(e: StorageEvent) {
-      // 만약 다른 탭에서 activeSession 값이 제거되었다면, 현재 탭이 보이는 상태일 때 takeover
       if (e.key === 'activeSession' && e.newValue === null) {
         if (!document.hidden) {
           myActiveSession = crypto.randomUUID();
@@ -308,15 +308,26 @@
     window.addEventListener('storage', storageHandler);
 
     function beforeUnloadHandler() {
-      // 현재 탭이 activeSession을 보유 중이라면, 탭 종료 시 제거
+      const stone = get(currentStone);
+      const payload = JSON.stringify({
+        id: stone.id,
+        type: stone.type,
+        size: stone.baseSize,
+        totalElapsed: stone.totalElapsed || 0,
+        countdown // 다음 돌까지 남은 시간 (초 단위)
+        // 필요시 여기서 경험치 등 추가 데이터 포함 가능
+      });
+      // 페이지 종료 시 동기적으로 데이터 전송
+      navigator.sendBeacon('/api/saveStoneState', payload);
+
+      // 기존 activeSession 정리 로직
       if (localStorage.getItem('activeSession') === myActiveSession) {
         localStorage.removeItem('activeSession');
       }
     }
     window.addEventListener('beforeunload', beforeUnloadHandler);
-    // -----------------------
 
-    // onMount 콜백은 동기 함수로 작성하고 내부에서 async IIFE로 비동기 작업 수행
+    // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
       await loadUserStone();
       (async () => {
@@ -340,16 +351,13 @@
       })();
     })();
 
-    // requestAnimationFrame을 이용한 업데이트 루프 시작
+    // requestAnimationFrame을 이용한 업데이트 루프 시작 및 기존 autoUpdateStone, updateUserXp 호출
     let lastUpdateTime = performance.now();
     let animationFrameId: number;
-
     function updateLoop(currentTime: number) {
       const elapsedTime = currentTime - lastUpdateTime;
       const elapsedSeconds = Math.floor(elapsedTime / 1000);
-
       if (elapsedSeconds > 0) {
-        // 돌 성장 및 내부 상태 업데이트 (누락된 초 만큼 보정)
         currentStone.update((stone) => {
           let newSize = stone.baseSize;
           let newTotalElapsed = stone.totalElapsed || 0;
@@ -362,36 +370,29 @@
           computedSize = newSize;
           return { ...stone, baseSize: newSize, totalElapsed: newTotalElapsed };
         });
-
-        // DB 자동 업데이트 및 xp 계산 (경과된 초만큼 xp 증가)
         autoUpdateStone();
         updateUserXp(elapsedSeconds);
-        
-        // 타이머(남은 시간) 업데이트
         if (countdown > elapsedSeconds) {
           countdown -= elapsedSeconds;
           updateRemainingTime(countdown);
         } else {
-          // 남은 시간이 다 소진되면 새 돌을 뽑고 타이머를 리셋
           drawStone().then(() => {
             countdown = 3600;
             updateRemainingTime(3600);
           });
         }
-
-        // 누락된 초 만큼을 보정해 다음 호출 기준 시각을 업데이트
         lastUpdateTime += elapsedSeconds * 1000;
       }
-
       animationFrameId = requestAnimationFrame(updateLoop);
     }
-
     animationFrameId = requestAnimationFrame(updateLoop);
 
-    // 자정 체크 타이머 설정 - setInterval 밖으로 이동
-    setupMidnightCheck();
+    // 추가: SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
+    beforeNavigate(async () => {
+      await autoUpdateStone();
+    });
 
-    // Supabase realtime 채널 구독 (현재 돌 업데이트)
+    // Supabase 실시간 채널 구독 등 기존 로직 유지
     const stoneId = get(currentStone).id;
     stonesSubscription = supabase
       .channel('stone-updates')
@@ -420,7 +421,6 @@
       )
       .subscribe();
 
-    // 컴포넌트 언마운트 시 requestAnimationFrame 취소와 Supabase 채널 구독 해제
     return () => {
       cancelAnimationFrame(animationFrameId);
       supabase.removeChannel(stonesSubscription);
