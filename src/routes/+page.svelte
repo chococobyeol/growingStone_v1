@@ -43,6 +43,7 @@
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  /* 사용하지 않는 함수: randomizeStone
   function randomizeStone() {
     const randomType = getRandomStoneType();
     currentStone.update((stone) => ({
@@ -53,6 +54,7 @@
       name: randomType
     }));
   }
+  */
 
   // 돌 이름 수정 함수 (번역 적용)
   function editStoneName() {
@@ -429,7 +431,7 @@
     };
   });
 
-  // 자정에 자동으로 출석 체크를 수행하는 함수 - setInterval 외부로 이동
+  /* 사용하지 않는 함수: setupMidnightCheck
   function setupMidnightCheck() {
     // 한국 시간 기준 다음 자정까지 남은 시간 계산
     const now = new Date();
@@ -441,8 +443,6 @@
     
     // 다음 자정까지 남은 밀리초
     const timeUntilMidnight = tomorrow.getTime() - kstNow.getTime();
-    
-    // console.log(`다음 출석 체크까지: ${Math.floor(timeUntilMidnight / 1000 / 60)}분`);
     
     setTimeout(async () => {
       // console.log('자정 출석 체크 실행');
@@ -459,6 +459,7 @@
       setupMidnightCheck();
     }, timeUntilMidnight);
   }
+  */
 
   async function logoutHandler() {
     const sessionResponse = await supabase.auth.getSession();
