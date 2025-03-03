@@ -404,7 +404,8 @@
           filter: `id=eq.${stoneId}`
         },
         (payload: any) => {
-          console.log('실시간 돌 업데이트:', payload);
+          // 불필요한 로그 주석 처리
+          // console.log('실시간 돌 업데이트:', payload);
           const updatedStone = payload.new;
           if (updatedStone.id === stoneId) {
             currentStone.set({
@@ -441,10 +442,10 @@
     // 다음 자정까지 남은 밀리초
     const timeUntilMidnight = tomorrow.getTime() - kstNow.getTime();
     
-    console.log(`다음 출석 체크까지: ${Math.floor(timeUntilMidnight / 1000 / 60)}분`);
+    // console.log(`다음 출석 체크까지: ${Math.floor(timeUntilMidnight / 1000 / 60)}분`);
     
     setTimeout(async () => {
-      console.log('자정 출석 체크 실행');
+      // console.log('자정 출석 체크 실행');
       const attendanceRes = await checkAttendance();
       if (attendanceRes.message) {
         attendanceMsg = get(t)(attendanceRes.message);
@@ -462,7 +463,7 @@
   async function logoutHandler() {
     const sessionResponse = await supabase.auth.getSession();
     if (!sessionResponse.data.session) {
-      console.log("현재 활성화된 세션이 없습니다. 이미 로그아웃 상태입니다.");
+      // console.log("현재 활성화된 세션이 없습니다. 이미 로그아웃 상태입니다.");
       goto('/login');
       return;
     }
@@ -470,13 +471,13 @@
     const { error } = await supabase.auth.signOut();
     if (error) {
       if (error.message === "Auth session missing!") {
-        console.log("세션이 이미 만료되었거나 존재하지 않습니다. 로그인 페이지로 이동합니다.");
+        // console.log("세션이 이미 만료되었거나 존재하지 않습니다. 로그인 페이지로 이동합니다.");
         goto('/login');
         return;
       }
       console.error("로그아웃 실패:", error.message);
     } else {
-      console.log("로그아웃 성공");
+      // console.log("로그아웃 성공");
       goto('/login');
     }
   }
@@ -509,7 +510,7 @@
     if (error) {
       console.error("돌 뽑기 실패:", error);
     } else {
-      console.log("돌 뽑기 성공:", data);
+      // console.log("돌 뽑기 성공:", data);
       await recordAcquiredStone(randomType);
     }
   }
