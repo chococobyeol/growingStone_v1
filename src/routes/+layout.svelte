@@ -9,17 +9,16 @@
 	import { t } from 'svelte-i18n';
 	import { setLanguage } from '$lib/i18n';
 	import { goto } from '$app/navigation';
-	import { isPrimary } from '$lib/activeSessionManager';
+	import { isPrimary, myId } from '$lib/activeSessionManager';
 	import { get } from 'svelte/store';
   
 	let localeReady = false;
-	// 번역 리소스 로딩 완료될 때까지 기다립니다.
 	waitLocale().then(() => {
 	  localeReady = true;
 	});
   
 	let user: User | null = null;
-	let logoutTriggered = false; // 로그아웃이 이미 실행되었는지 여부를 체크
+	let logoutTriggered = false; // 로그아웃이 이미 실행되었는지 여부
   
 	// store 구독을 통해 로그인 상태를 받아옴
 	const unsubscribe = session.subscribe((currentSession) => {
@@ -34,13 +33,11 @@
 	  unsubscribe();
 	});
   
-	// 인증 전용 페이지 리스트에서 '/guest' 제거
 	const authRoutes = ['/login', '/register'];
   
 	async function logout() {
 	  const { data: sessionData } = await supabase.auth.getSession();
 	  if (!sessionData?.session) {
-		// 세션이 없는 경우에도 클라이언트 상태를 강제로 초기화
 		session.set(null);
 		localStorage.removeItem('activeSession');
 		goto('/');
@@ -68,6 +65,7 @@
 	// activeSessionSubscription 변수의 타입을 명시합니다.
 	let activeSessionSubscription: RealtimeChannel | null = null;
   
+	// 실시간 구독: active_session 값이 변경되면 체크
 	$: if (user) {
 	  const userId = user.id;
 	  activeSessionSubscription = supabase
@@ -83,7 +81,7 @@
 		  (payload: any) => {
 			const newActiveSession = payload.new.active_session;
 			const localActiveSession = localStorage.getItem('activeSession');
-			// logoutTriggered가 false일 때 한 번만 실행하도록 처리
+			// primary 탭이 아닌 경우(localActiveSession와 다르면)
 			if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			  logoutTriggered = true;
 			  alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
@@ -143,23 +141,20 @@
 		console.error('세션 로드 실패:', error.message);
 		return;
 	  }
-	  if (sessionData?.session) {
-		let activeSession = localStorage.getItem('activeSession');
-		if (!activeSession) {
-		  activeSession = crypto.randomUUID();
-		  localStorage.setItem('activeSession', activeSession);
-		  const { error: updateError } = await supabase
-			.from('profiles')
-			.update({ active_session: activeSession })
-			.eq('id', sessionData.session.user.id);
-		  if (updateError) {
-			console.error("active_session 업데이트 실패:", updateError.message);
-		  }
+	  if (sessionData?.session && get(isPrimary)) {
+		const activeSession = myId;
+		localStorage.setItem('activeSession', activeSession);
+		const { error: updateError } = await supabase
+		  .from('profiles')
+		  .update({ active_session: activeSession })
+		  .eq('id', sessionData.session.user.id);
+		if (updateError) {
+		  console.error("active_session 업데이트 실패:", updateError.message);
 		}
 	  }
 	}
-
-	// 페이지 로드 시 active_session 값 업데이트 실행
+  
+	// 페이지 로드시 및 일정 주기로 active_session을 업데이트합니다.
 	onMount(() => {
 	  updateActiveSession();
 	  
@@ -187,7 +182,7 @@
 		  }
 		}
 	  }, 5000);
-
+  
 	  return () => {
 		clearInterval(interval);
 	  };
