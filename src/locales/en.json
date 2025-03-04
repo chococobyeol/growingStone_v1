@@ -257,5 +257,9 @@
   "privacySection6Title": "6. Data Protection Officer",
   "privacySection6Name": "Growstone",
   "privacySection6Email": "Email: chococobyeol@gmail.com",
-  "privacySection7Content": "This Privacy Policy will be effective as of March 2, 2025."
+  "privacySection7Content": "This Privacy Policy will be effective as of March 2, 2025.",
+  "alert": {
+    "otherDeviceLoggedIn": "You have been logged out because your account was logged in from another device.",
+    "multipleTabsDetected": "Another tab in this browser was detected, so you have been logged out."
+  }
 }

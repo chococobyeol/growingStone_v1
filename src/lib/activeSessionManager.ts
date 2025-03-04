@@ -18,7 +18,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   };
 
   claimPrimary = () => {
-    // primary 탭으로 설정하고 localStorage에도 기록
+    // 이미 localStorage에 다른 primary 탭의 ID가 있다면 claim하지 않습니다.
+    const currentActive = localStorage.getItem('activeSession');
+    if (currentActive && currentActive !== myId) return;
+
     if (channel) {
       channel.postMessage({ type: 'claim-primary', id: myId });
     }
@@ -26,14 +29,20 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     localStorage.setItem('activeSession', myId);
   };
 
-  // 문서가 visible 상태이면 현재 탭이 primary가 되도록 claim
-  if (document.visibilityState === 'visible') {
+  // localStorage에 activeSession 값이 없을 때만 primary를 claim
+  if (!localStorage.getItem('activeSession') && document.visibilityState === 'visible') {
     claimPrimary();
   }
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      claimPrimary();
+      const currentActive = localStorage.getItem('activeSession');
+      // 이미 다른 탭에서 primary가 claim되어 있다면 이 탭은 무시합니다.
+      if (!currentActive) {
+        claimPrimary();
+      } else if (currentActive === myId) {
+        isPrimary.set(true);
+      }
     }
   });
 }

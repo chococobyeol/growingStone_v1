@@ -256,5 +256,9 @@
   "privacySection6Title": "6. 개인정보 보호책임자",
   "privacySection6Name": "돌 키우기",
   "privacySection6Email": "이메일: chococobyeol@gmail.com",
-  "privacySection7Content": "본 개인정보 처리 방침은 2025년 3월 2일부터 적용됩니다."
+  "privacySection7Content": "본 개인정보 처리 방침은 2025년 3월 2일부터 적용됩니다.",
+  "alert": {
+    "otherDeviceLoggedIn": "다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.",
+    "multipleTabsDetected": "동일 브라우저 내 다른 탭이 감지되어 로그아웃됩니다."
+  }
 }

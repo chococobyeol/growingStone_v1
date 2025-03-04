@@ -40,7 +40,8 @@
 	  if (!sessionData?.session) {
 		session.set(null);
 		localStorage.removeItem('activeSession');
-		goto('/');
+		// 로그인 직후에도 새로고침을 통해 state 초기화
+		window.location.reload();
 		return;
 	  }
 	  if (activeSessionSubscription) {
@@ -59,7 +60,8 @@
 	  // 클라이언트 상태 초기화 (세션, localStorage 등)
 	  session.set(null);
 	  localStorage.removeItem('activeSession');
-	  goto('/');
+	  // 로그아웃 후 페이지를 강제로 새로고침하여 문제 해결
+	  window.location.reload();
 	}
   
 	// activeSessionSubscription 변수의 타입을 명시합니다.
@@ -81,10 +83,10 @@
 		  (payload: any) => {
 			const newActiveSession = payload.new.active_session;
 			const localActiveSession = localStorage.getItem('activeSession');
-			// primary 탭이 아닌 경우(localActiveSession와 다르면)
+			// DB의 값과 다르면 다른 기기(혹은 탭)에서 로그인된 것으로 간주
 			if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			  logoutTriggered = true;
-			  alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
+			  alert(get(t)('alert.otherDeviceLoggedIn'));
 			  logout();
 			}
 		  }
@@ -123,7 +125,7 @@
 		  const localActiveSession = localStorage.getItem('activeSession');
 		  if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			logoutTriggered = true;
-			alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
+			alert(get(t)('alert.otherDeviceLoggedIn'));
 			logout();
 		  }
 		}
@@ -177,7 +179,7 @@
 		  const localActiveSession = localStorage.getItem('activeSession');
 		  if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			logoutTriggered = true;
-			alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
+			alert(get(t)('alert.otherDeviceLoggedIn'));
 			logout();
 		  }
 		}
@@ -187,6 +189,14 @@
 		clearInterval(interval);
 	  };
 	});
+
+	// 추가: 현재 탭이 primary가 아니라면, 
+	// 동일 브라우저 내 다중 탭 사용으로 간주하고 즉시 로그아웃하도록 처리합니다.
+	$: if (user && !get(isPrimary) && !logoutTriggered) {
+	  logoutTriggered = true;
+	  alert(get(t)('alert.multipleTabsDetected'));
+	  logout();
+	}
 </script>
 
 {#if localeReady}
