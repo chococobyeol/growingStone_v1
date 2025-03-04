@@ -288,7 +288,113 @@
    * ===================== */
   let stonesSubscription: RealtimeChannel;
 
+  // 타이머 및 돌 뽑기 관련 변수
+  let lastUpdateTime = performance.now();
+  let animationFrameId: number;
+  let isDrawing = false;
+  let pendingDraws = 0;
+  const drawPeriod = 3600; // 돌 뽑기 주기 (초)
+
+  function updateLoop(currentTime: number) {
+    // primary 창이 아니라면 업데이트 로직 무시
+    if (!get(isPrimary)) {
+      animationFrameId = requestAnimationFrame(updateLoop);
+      return;
+    }
+
+    const elapsedTime = currentTime - lastUpdateTime;
+    const elapsedSeconds = Math.floor(elapsedTime / 1000);
+
+    if (elapsedSeconds > 0) {
+      // 돌 성장 및 경험치 업데이트 처리
+      currentStone.update((stone) => {
+        let newSize = stone.baseSize;
+        let newTotalElapsed = stone.totalElapsed || 0;
+        for (let i = 0; i < elapsedSeconds; i++) {
+          const deltaX = growthFactor * Math.log((newTotalElapsed + 2) / (newTotalElapsed + 1));
+          const randomFactor = 0.4 * Math.random() + 0.8;
+          newSize += deltaX * randomFactor;
+          newTotalElapsed++;
+        }
+        computedSize = newSize;
+        return { ...stone, baseSize: newSize, totalElapsed: newTotalElapsed };
+      });
+      autoUpdateStone();
+      updateUserXp(elapsedSeconds);
+
+      // 타이머 업데이트 로직: countdown 내에 남은 경우와 넘어선 경우를 구분
+      if (elapsedSeconds < countdown) {
+        countdown -= elapsedSeconds;
+        updateRemainingTime(countdown);
+      } else {
+        let remainingAfterCycle = elapsedSeconds - countdown;
+        // 최초 countdown까지 1회 draw, 이후 drawPeriod(3600초)마다 추가 draw 발생
+        let drawsDue = 1 + Math.floor(remainingAfterCycle / drawPeriod);
+        pendingDraws += drawsDue;
+        let remainder = remainingAfterCycle % drawPeriod;
+        countdown = drawPeriod - remainder;
+        updateRemainingTime(countdown);
+      }
+      lastUpdateTime += elapsedSeconds * 1000;
+    }
+
+    // pendingDraws가 있으면 한 번에 여러 draw가 실행되지 않도록 순차적으로 처리
+    if (!isDrawing && pendingDraws > 0) {
+      processPendingDraws();
+    }
+
+    animationFrameId = requestAnimationFrame(updateLoop);
+  }
+
+  async function processPendingDraws() {
+    if (isDrawing) return;
+    isDrawing = true;
+    while (pendingDraws > 0) {
+      pendingDraws--;
+      await drawStone();
+    }
+    isDrawing = false;
+  }
+
+  // 돌 뽑기 함수: 기존 기능 그대로 사용 (drawStone 호출 시 새로운 돌 생성)
+  async function drawStone() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션 로드 실패:", sessionError);
+      return;
+    }
+    if (!sessionData?.session?.user) {
+      console.error("로그인된 사용자가 없습니다.");
+      return;
+    }
+    const randomType = getRandomStoneType();
+    const newStone = {
+      id: crypto.randomUUID(),
+      type: randomType,
+      size: 1,
+      name: randomType,
+      discovered_at: new Date().toISOString(),
+      user_id: sessionData.session.user.id,
+      totalElapsed: 0
+    };
+    const { data, error } = await supabase.from('stones').insert(newStone).select();
+    if (error) {
+      console.error("돌 뽑기 실패:", error);
+    } else {
+      await recordAcquiredStone(randomType);
+    }
+  }
+
+  // SPA 내 페이지 이동 전 자동 저장 처리
+  beforeNavigate(async () => {
+    await autoUpdateStone();
+  });
+
   onMount(() => {
+    // 기존 초기화 작업 후 updateLoop 시작
+    lastUpdateTime = performance.now();
+    animationFrameId = requestAnimationFrame(updateLoop);
+
     // -----------------------
     // Active Session 관리 로직
     // -----------------------
@@ -353,53 +459,6 @@
         }
       })();
     })();
-
-    // requestAnimationFrame을 이용한 업데이트 루프 시작 및 기존 autoUpdateStone, updateUserXp 호출
-    let lastUpdateTime = performance.now();
-    let animationFrameId: number;
-    function updateLoop(currentTime: number) {
-      // primary 창이 아닌 경우, 업데이트 로직을 수행하지 않고 다음 프레임 요청
-      if (!get(isPrimary)) {
-        animationFrameId = requestAnimationFrame(updateLoop);
-        return;
-      }
-
-      const elapsedTime = currentTime - lastUpdateTime;
-      const elapsedSeconds = Math.floor(elapsedTime / 1000);
-      if (elapsedSeconds > 0) {
-        currentStone.update((stone) => {
-          let newSize = stone.baseSize;
-          let newTotalElapsed = stone.totalElapsed || 0;
-          for (let i = 0; i < elapsedSeconds; i++) {
-            const deltaX = growthFactor * Math.log((newTotalElapsed + 2) / (newTotalElapsed + 1));
-            const randomFactor = 0.4 * Math.random() + 0.8;
-            newSize += deltaX * randomFactor;
-            newTotalElapsed++;
-          }
-          computedSize = newSize;
-          return { ...stone, baseSize: newSize, totalElapsed: newTotalElapsed };
-        });
-        autoUpdateStone();
-        updateUserXp(elapsedSeconds);
-        if (countdown > elapsedSeconds) {
-          countdown -= elapsedSeconds;
-          updateRemainingTime(countdown);
-        } else {
-          drawStone().then(() => {
-            countdown = 3600;
-            updateRemainingTime(3600);
-          });
-        }
-        lastUpdateTime += elapsedSeconds * 1000;
-      }
-      animationFrameId = requestAnimationFrame(updateLoop);
-    }
-    animationFrameId = requestAnimationFrame(updateLoop);
-
-    // 추가: SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
-    beforeNavigate(async () => {
-      await autoUpdateStone();
-    });
 
     // Supabase 실시간 채널 구독 등 기존 로직 유지
     const stoneId = get(currentStone).id;
@@ -492,35 +551,6 @@
 
   async function saveStone() {
     // 더 이상 사용하지 않을 저장 기능
-  }
-
-  async function drawStone() {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      console.error("세션 로드 실패:", sessionError);
-      return;
-    }
-    if (!sessionData?.session?.user) {
-      console.error("로그인된 사용자가 없습니다.");
-      return;
-    }
-    const randomType = getRandomStoneType();
-    const newStone = {
-      id: crypto.randomUUID(),
-      type: randomType,
-      size: 1,
-      name: randomType,
-      discovered_at: new Date().toISOString(),
-      user_id: sessionData.session.user.id,
-      totalElapsed: 0
-    };
-    const { data, error } = await supabase.from('stones').insert(newStone).select();
-    if (error) {
-      console.error("돌 뽑기 실패:", error);
-    } else {
-      // console.log("돌 뽑기 성공:", data);
-      await recordAcquiredStone(randomType);
-    }
   }
 
   function handleShare(): void {
