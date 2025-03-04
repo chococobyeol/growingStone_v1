@@ -197,6 +197,16 @@
 	  alert(get(t)('alert.multipleTabsDetected'));
 	  logout();
 	}
+
+	// ★ 추가: 최초 로그인 시 active_session을 강제로 동기화 (한 번만 실행)
+	let activeSessionInitialized = false;
+	$: if (user && get(isPrimary) && !activeSessionInitialized) {
+		activeSessionInitialized = true;
+		// 우선 localStorage에 현재 탭의 myId를 저장하고
+		localStorage.setItem('activeSession', myId);
+		// DB에도 바로 업데이트하여 이후의 구독시 값이 일치하도록 함
+		updateActiveSession();
+	}
 </script>
 
 {#if localeReady}
