@@ -137,13 +137,32 @@
   }
 
   async function drawStoneAndSetCurrent() {
+    const lockKey = 'stoneCreationLock';
+    // 이미 돌 생성 중이면, 돌 정보를 다시 불러오도록 대기합니다.
+    if (localStorage.getItem(lockKey)) {
+      // 락이 해제될 때까지 100ms 간격으로 체크
+      await new Promise(resolve => {
+        const checkLock = setInterval(() => {
+          if (!localStorage.getItem(lockKey)) {
+            clearInterval(checkLock);
+            resolve(null);
+          }
+        }, 100);
+      });
+      return loadUserStone();
+    }
+    // 돌 생성 시작 전 락 설정
+    localStorage.setItem(lockKey, 'true');
+
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error("세션 로드 실패:", sessionError);
+      localStorage.removeItem(lockKey);
       return;
     }
     if (!sessionData?.session?.user) {
       console.error("로그인된 사용자가 없습니다.");
+      localStorage.removeItem(lockKey);
       return;
     }
     const userId = sessionData.session.user.id;
@@ -160,6 +179,7 @@
     const { data, error } = await supabase.from('stones').insert(newStone).select();
     if (error) {
       console.error("돌 뽑기 실패:", error);
+      localStorage.removeItem(lockKey);
     } else if (data && data.length > 0) {
       const createdStone = data[0];
       currentStone.set({
@@ -181,6 +201,7 @@
       }
       
       await recordAcquiredStone(createdStone.type);
+      localStorage.removeItem(lockKey);
     }
   }
 
