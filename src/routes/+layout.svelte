@@ -84,7 +84,7 @@
 			// primary 탭이 아닌 경우(localActiveSession와 다르면)
 			if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			  logoutTriggered = true;
-			  alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
+			  alert($t('otherDeviceLoginAlert'));
 			  logout();
 			}
 		  }
@@ -146,7 +146,7 @@
 		  const localActiveSession = localStorage.getItem('activeSession');
 		  if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			logoutTriggered = true;
-			alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
+			alert($t('otherDeviceLoginAlert'));
 			logout();
 		  }
 		}

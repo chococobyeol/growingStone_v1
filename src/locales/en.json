@@ -101,6 +101,11 @@
     "dolomite": "Dolomite",
     "gabbro": "Gabbro",
     "marl": "Marl",
+    "obsidian": "Obsidian",
+    "pumice": "Pumice",
+    "rhyolite": "Rhyolite",
+    "scoria": "Scoria",
+    "slate": "Slate",
     "agate": "Agate",
     "calcite": "Calcite",
     "feldspar": "Feldspar",
@@ -110,12 +115,7 @@
     "pyrite": "Pyrite",
     "quartz": "Quartz",
     "sapphire": "Sapphire",
-    "schist": "Schist",
-    "obsidian": "Obsidian",
-    "pumice": "Pumice",
-    "rhyolite": "Rhyolite",
-    "scoria": "Scoria",
-    "slate": "Slate"
+    "schist": "Schist"
   },
   "acquiredCount": "Acquired Count",
   "createdAt": "First Discovery",
@@ -257,5 +257,6 @@
   "privacySection6Title": "6. Data Protection Officer",
   "privacySection6Name": "Growstone",
   "privacySection6Email": "Email: chococobyeol@gmail.com",
-  "privacySection7Content": "This Privacy Policy will be effective as of March 2, 2025."
+  "privacySection7Content": "This Privacy Policy will be effective as of March 2, 2025.",
+  "otherDeviceLoginAlert": "You have been logged in on another device. This device will now be logged out."
 }
