@@ -35,6 +35,9 @@
   
 	const authRoutes = ['/login', '/register'];
   
+	// browserId 변수만 선언 (클라이언트에서 초기화)
+	let browserId: string = "";
+  
 	async function logout() {
 	  const { data: sessionData } = await supabase.auth.getSession();
 	  if (!sessionData?.session) {
@@ -46,9 +49,16 @@
 	  if (activeSessionSubscription) {
 		supabase.removeChannel(activeSessionSubscription);
 	  }
+	  // 추가: 로그아웃하기 전에 현재 세션의 active_session을 DB에서 초기화
+	  const { error: clearError } = await supabase
+		.from('profiles')
+		.update({ active_session: null })
+		.eq('id', sessionData.session.user.id);
+	  if (clearError) {
+		console.warn("로그아웃 전 active_session 초기화 실패:", clearError.message);
+	  }
 	  const { error } = await supabase.auth.signOut();
 	  if (error) {
-		// 'Auth session missing!' 오류는 이미 세션이 없는 것으로 판단하여 무시
 		if (error.message === 'Auth session missing!') {
 		  console.warn("세션이 이미 만료되어 강제 로그아웃 처리합니다.");
 		} else {
@@ -79,9 +89,9 @@
 			filter: `id=eq.${userId}`
 		  },
 		  (payload: any) => {
+			if (!get(isPrimary)) return;
 			const newActiveSession = payload.new.active_session;
 			const localActiveSession = localStorage.getItem('activeSession');
-			// primary 탭이 아닌 경우(localActiveSession와 다르면)
 			if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			  logoutTriggered = true;
 			  alert($t('otherDeviceLoginAlert'));
@@ -111,7 +121,8 @@
 		return;
 	  }
 	  if (sessionData?.session && get(isPrimary)) {
-		const activeSession = myId;
+		// primary 탭에서는 모든 탭이 공유하는 browserId로 업데이트하여 같은 브라우저 내에서 값 불일치를 방지함
+		const activeSession = browserId;
 		localStorage.setItem('activeSession', activeSession);
 		const { error: updateError } = await supabase
 		  .from('profiles')
@@ -125,6 +136,17 @@
   
 	// 페이지 로드시 및 일정 주기로 active_session을 업데이트합니다.
 	onMount(() => {
+	  // 클라이언트 전용: browserId 초기화
+	  if (typeof localStorage !== 'undefined') {
+	    const stored = localStorage.getItem('browserId');
+	    if (stored) {
+	      browserId = stored;
+	    } else {
+	      browserId = crypto.randomUUID();
+	      localStorage.setItem('browserId', browserId);
+	    }
+	  }
+	  
 	  updateActiveSession();
 	  
 	  // 기존의 폴링 및 구독 로직 (하나만 유지)
@@ -155,6 +177,18 @@
 	  return () => {
 		clearInterval(interval);
 	  };
+	});
+
+	// **추가 onMount:** 탭이 다시 활성화될 때 active_session 동기화 처리
+	onMount(() => {
+	  const handleVisibilityChange = () => {
+		if (document.visibilityState === 'visible' && get(isPrimary)) {
+		  // 탭이 활성화될 때 active_session 업데이트 실행
+		  updateActiveSession();
+		}
+	  };
+	  document.addEventListener('visibilitychange', handleVisibilityChange);
+	  return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
 	});
 
 	// BroadcastChannel을 이용한 탭 내 라우트 동기화 추가
