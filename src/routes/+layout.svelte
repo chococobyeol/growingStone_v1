@@ -340,3 +340,7 @@
     background-color: #a3cbb1;
   }
 </style>
+
+<svelte:head>
+  <title>Growing Stone</title>
+</svelte:head>

@@ -44,10 +44,22 @@
   }
 
   async function loadStoredStones() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션을 가져오는 데 실패했습니다:", sessionError.message);
+      errorMsg = sessionError.message;
+      return;
+    }
+    const user = sessionData?.session?.user;
+    if (!user) {
+      errorMsg = "로그인된 사용자가 없습니다.";
+      return;
+    }
+    
     const { data, error } = await supabase
       .from('stones')
       .select('*, market_listings!left(id, status)')
-      .eq('user_id', (await supabase.auth.getUser()).data?.user?.id)
+      .eq('user_id', user.id)
       .order('discovered_at', { ascending: false });
     if (error) {
       console.error('스톤 데이터 가져오기 오류:', error);
@@ -265,10 +277,17 @@
     loadCurrentStone();
     window.addEventListener('keydown', handleKeydown);
     
-    // 로그인한 사용자 ID 가져오기
-    supabase.auth.getUser().then(({ data }) => {
-      const userId = data?.user?.id;
-    
+    supabase.auth.getSession().then(({ data: sessionData, error }) => {
+      if (error) {
+        console.error("세션을 가져오는 데 실패했습니다:", error.message);
+        return;
+      }
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) {
+        errorMsg = "로그인된 사용자가 없습니다.";
+        return;
+      }
+      
       // 실시간 구독: 현재 사용자의 stones 테이블 변경 이벤트만 감지
       stonesSubscription = supabase
         .channel('stones-storage')
@@ -278,7 +297,7 @@
             event: 'INSERT', 
             schema: 'public', 
             table: 'stones',
-            filter: userId ? `user_id=eq.${userId}` : undefined
+            filter: `user_id=eq.${userId}`
           },
           (payload: any) => {
             console.log('Stone INSERT 이벤트:', payload);
@@ -291,7 +310,7 @@
             event: 'UPDATE', 
             schema: 'public', 
             table: 'stones',
-            filter: userId ? `user_id=eq.${userId}` : undefined
+            filter: `user_id=eq.${userId}`
           },
           (payload: any) => {
             console.log('Stone UPDATE 이벤트:', payload);
@@ -304,7 +323,7 @@
             event: 'DELETE', 
             schema: 'public', 
             table: 'stones',
-            filter: userId ? `user_id=eq.${userId}` : undefined
+            filter: `user_id=eq.${userId}`
           },
           (payload: any) => {
             console.log('Stone DELETE 이벤트:', payload);
@@ -316,7 +335,9 @@
 
     return () => {
       window.removeEventListener('keydown', handleKeydown);
-      supabase.removeChannel(stonesSubscription);
+      if (stonesSubscription) {
+        supabase.removeChannel(stonesSubscription);
+      }
     };
   });
 </script>
