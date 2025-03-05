@@ -257,5 +257,5 @@
   "privacySection6Name": "돌 키우기",
   "privacySection6Email": "이메일: chococobyeol@gmail.com",
   "privacySection7Content": "본 개인정보 처리 방침은 2025년 3월 2일부터 적용됩니다.",
-  "otherDeviceLoginAlert": "중복으로 로그인되었습니다. 로그아웃됩니다"
+  "otherDeviceLoginAlert": "세션 오류로 로그아웃됩니다."
 }
