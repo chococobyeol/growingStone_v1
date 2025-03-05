@@ -156,6 +156,34 @@
 		clearInterval(interval);
 	  };
 	});
+
+	// BroadcastChannel을 이용한 탭 내 라우트 동기화 추가
+	onMount(() => {
+	  const bc = new BroadcastChannel('tab-navigation');
+	  let updateFromBroadcast = false;
+
+	  const unsubscribePage = page.subscribe(($page) => {
+	    // Broadcast를 통해 갱신된 것이 아니라면 현재 경로를 전파
+	    if (!updateFromBroadcast) {
+	      bc.postMessage($page.url.pathname);
+	    }
+	    updateFromBroadcast = false;
+	  });
+
+	  bc.onmessage = (event) => {
+	    const newPath = event.data;
+	    // 수신한 경로와 현재 경로가 다르면 라우트 변경
+	    if (newPath && newPath !== window.location.pathname) {
+	      updateFromBroadcast = true;
+	      goto(newPath);
+	    }
+	  };
+
+	  return () => {
+	    unsubscribePage();
+	    bc.close();
+	  };
+	});
 </script>
 
 {#if localeReady}
