@@ -82,7 +82,7 @@
 			const newActiveSession = payload.new.active_session;
 			const localActiveSession = localStorage.getItem('activeSession');
 			// primary 탭이 아닌 경우(localActiveSession와 다르면)
-			if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
+			if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			  logoutTriggered = true;
 			  alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
 			  logout();
@@ -91,7 +91,7 @@
 		)
 		.subscribe();
 	} else {
-	  // user가 없을 때 기존 구독이 있다면 구독 해제
+	  // user가 없을 때 기존 구독 해제
 	  if (activeSessionSubscription) {
 		supabase.removeChannel(activeSessionSubscription);
 	  }
@@ -100,37 +100,6 @@
 	onDestroy(() => {
 	  if (activeSessionSubscription) {
 		supabase.removeChannel(activeSessionSubscription);
-	  }
-	});
-
-	// 추가: 폴링 기능을 통해 주기적으로 active_session 값을 체크
-	onMount(() => {
-	  const interval = setInterval(async () => {
-		if (user && get(isPrimary)) {
-		  const { data: sessionData } = await supabase.auth.getSession();
-		  if (!sessionData?.session?.user) return;
-		  const userId = sessionData.session.user.id;
-		  const { data: profileData, error } = await supabase
-			.from('profiles')
-			.select('active_session')
-			.eq('id', userId)
-			.single();
-		  if (error) {
-			console.error("프로필의 active_session 로드 실패:", error.message);
-			return;
-		  }
-		  const newActiveSession = profileData.active_session;
-		  const localActiveSession = localStorage.getItem('activeSession');
-		  if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
-			logoutTriggered = true;
-			alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
-			logout();
-		  }
-		}
-	  }, 5000);
-
-	  return () => {
-		clearInterval(interval);
 	  }
 	});
 
@@ -158,7 +127,7 @@
 	onMount(() => {
 	  updateActiveSession();
 	  
-	  // 기존의 폴링 및 구독 로직도 함께 실행됩니다.
+	  // 기존의 폴링 및 구독 로직 (하나만 유지)
 	  const interval = setInterval(async () => {
 		if (user && get(isPrimary)) {
 		  const { data: sessionData } = await supabase.auth.getSession();
@@ -175,7 +144,7 @@
 		  }
 		  const newActiveSession = profileData.active_session;
 		  const localActiveSession = localStorage.getItem('activeSession');
-		  if (localActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
+		  if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
 			logoutTriggered = true;
 			alert("다른 기기에서 로그인되었습니다. 현재 기기는 로그아웃됩니다.");
 			logout();
