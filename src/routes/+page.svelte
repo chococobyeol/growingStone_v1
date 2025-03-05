@@ -354,19 +354,25 @@
       })();
     })();
 
-    // requestAnimationFrame을 이용한 업데이트 루프 시작 및 기존 autoUpdateStone, updateUserXp 호출
+    // ── requestAnimationFrame을 이용한 업데이트 루프 시작 ────────────────────────
     let lastUpdateTime = performance.now();
     let animationFrameId: number;
+    // 신규로 추가된 변수들 (돌 뽑기 관련)
+    let isDrawing = false;
+    let pendingDraws = 0;
+    const drawPeriod = 3600; // 돌 뽑기 주기 (초)
+
     function updateLoop(currentTime: number) {
-      // primary 창이 아닌 경우, 업데이트 로직을 수행하지 않고 다음 프레임 요청
+      // primary 창이 아닌 경우 업데이트 로직 건너뛰기
       if (!get(isPrimary)) {
         animationFrameId = requestAnimationFrame(updateLoop);
         return;
       }
-
+  
       const elapsedTime = currentTime - lastUpdateTime;
       const elapsedSeconds = Math.floor(elapsedTime / 1000);
       if (elapsedSeconds > 0) {
+        // 돌 성장 및 경험치 업데이트 처리
         currentStone.update((stone) => {
           let newSize = stone.baseSize;
           let newTotalElapsed = stone.totalElapsed || 0;
@@ -379,24 +385,48 @@
           computedSize = newSize;
           return { ...stone, baseSize: newSize, totalElapsed: newTotalElapsed };
         });
+  
         autoUpdateStone();
         updateUserXp(elapsedSeconds);
-        if (countdown > elapsedSeconds) {
+  
+        // 타이머 업데이트 및 돌 뽑기 로직 개선
+        if (elapsedSeconds < countdown) {
           countdown -= elapsedSeconds;
           updateRemainingTime(countdown);
         } else {
-          drawStone().then(() => {
-            countdown = 3600;
-            updateRemainingTime(3600);
-          });
+          let remainingAfterCycle = elapsedSeconds - countdown;
+          // 최초 countdown까지 1회 draw, 이후 drawPeriod마다 추가 draw 발생
+          let drawsDue = 1 + Math.floor(remainingAfterCycle / drawPeriod);
+          pendingDraws += drawsDue;
+          let remainder = remainingAfterCycle % drawPeriod;
+          countdown = drawPeriod - remainder;
+          updateRemainingTime(countdown);
         }
+  
         lastUpdateTime += elapsedSeconds * 1000;
       }
+  
+      // pendingDraws가 있을 경우 순차적으로 돌 뽑기 실행
+      if (!isDrawing && pendingDraws > 0) {
+        processPendingDraws();
+      }
+  
       animationFrameId = requestAnimationFrame(updateLoop);
     }
+  
+    async function processPendingDraws() {
+      if (isDrawing) return;
+      isDrawing = true;
+      while (pendingDraws > 0) {
+        pendingDraws--;
+        await drawStone();
+      }
+      isDrawing = false;
+    }
+  
     animationFrameId = requestAnimationFrame(updateLoop);
-
-    // 추가: SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
+  
+    // SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
     beforeNavigate(async () => {
       await autoUpdateStone();
     });
@@ -414,8 +444,6 @@
           filter: `id=eq.${stoneId}`
         },
         (payload: any) => {
-          // 불필요한 로그 주석 처리
-          // console.log('실시간 돌 업데이트:', payload);
           const updatedStone = payload.new;
           if (updatedStone.id === stoneId) {
             currentStone.set({
@@ -429,7 +457,7 @@
         }
       )
       .subscribe();
-
+  
     return () => {
       cancelAnimationFrame(animationFrameId);
       supabase.removeChannel(stonesSubscription);
