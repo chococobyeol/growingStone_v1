@@ -168,10 +168,14 @@
 
 <!-- ★ 돌 획득 확률 모달 영역 -->
 {#if showProbabilityModal}
-  <div class="modal-overlay" tabindex="0" role="button" on:click={closeProbabilityModal} on:keydown={(e) => { if(e.key === 'Enter' || e.key === ' ') closeProbabilityModal(); }}>
+  <div
+    class="modal-overlay"
+    tabindex="0"
+    role="button"
+    on:click={closeProbabilityModal}
+    on:keydown={(e) => { if(e.key === 'Enter' || e.key === ' ') closeProbabilityModal(); }}>
     <div class="modal-card" role="presentation" on:click|stopPropagation>
       <button type="button" class="modal-close" on:click={closeProbabilityModal}>&times;</button>
-      <h2>{$t('acquisitionProbability') || "돌 획득 확률"}</h2>
       <div class="probability-table">
         {#if stoneProbabilities.length > 0}
           <table>
