@@ -69,7 +69,10 @@
     try {
       const response = await fetch('/stoneProbability.csv');
       const csvText = await response.text();
-      stoneProbabilities = parseCSV(csvText);
+      let probabilities = parseCSV(csvText);
+      // 확률 내림차순 정렬 (Probability 값이 큰 순으로)
+      probabilities.sort((a, b) => parseFloat(b.Probability) - parseFloat(a.Probability));
+      stoneProbabilities = probabilities;
     } catch (err) {
       console.error("CSV 불러오기 실패:", err);
     }
