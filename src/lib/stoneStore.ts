@@ -9,43 +9,53 @@ export type StoneType = {
 };
 
 const weightedStoneTypes = [
-  // 주로 화성암
-  { type: 'basalt',       weight: 12 }, // 해양 지각 주 구성
-  { type: 'granite',      weight: 10 }, // 대륙 지각 주 구성
-  { type: 'gabbro',       weight: 6 },
-  { type: 'diorite',      weight: 3 },
-  { type: 'andesite',     weight: 4 },
-  { type: 'obsidian',     weight: 1 },
-  { type: 'pumice',       weight: 1 },
-  { type: 'rhyolite',     weight: 2 },
-  { type: 'scoria',       weight: 1 },
-  { type: 'tuff',         weight: 2 },
-  { type: 'pegmatite',    weight: 1 },
+  // 주로 화성암 (총 0.2000)
+  { type: 'basalt',       weight: 0.0100 },
+  { type: 'granite',      weight: 0.1000 },
+  { type: 'gabbro',       weight: 0.0200 },
+  { type: 'diorite',      weight: 0.0100 },
+  { type: 'andesite',     weight: 0.0200 },
+  { type: 'obsidian',     weight: 0.0050 },
+  { type: 'pumice',       weight: 0.0050 },
+  { type: 'rhyolite',     weight: 0.0100 },
+  { type: 'scoria',       weight: 0.0050 },
+  { type: 'tuff',         weight: 0.0100 },
+  { type: 'pegmatite',    weight: 0.0050 },
 
-  // 주로 변성암
-  { type: 'gneiss',       weight: 8 },
-  { type: 'schist',       weight: 6 },
-  { type: 'quartzite',    weight: 3 },
-  { type: 'slate',        weight: 3 },
-  { type: 'marble',       weight: 2 },
+  // 주로 변성암 (총 0.2000)
+  { type: 'gneiss',       weight: 0.0728 },
+  { type: 'schist',       weight: 0.0545 },
+  { type: 'quartzite',    weight: 0.0273 },
+  { type: 'slate',        weight: 0.0273 },
+  { type: 'marble',       weight: 0.0183 },
 
-  // 주로 퇴적암
-  { type: 'conglomerate', weight: 1 },
-  { type: 'sandstone',    weight: 5 },
-  { type: 'shale',        weight: 5 },
-  { type: 'limestone',    weight: 6 },
-  { type: 'chert',        weight: 2 },
-  { type: 'dolomite',     weight: 2 },
-  { type: 'marl',         weight: 1 },
+  // 주로 퇴적암 (총 0.4000)
+  { type: 'conglomerate', weight: 0.0180 },
+  { type: 'sandstone',    weight: 0.0910 },
+  { type: 'shale',        weight: 0.0910 },
+  { type: 'limestone',    weight: 0.1090 },
+  { type: 'chert',        weight: 0.0365 },
+  { type: 'dolomite',     weight: 0.0365 },
+  { type: 'marl',         weight: 0.0180 },
 
-  // 광물(또는 보석/준보석)
-  { type: 'agate',        weight: 1 }, // 상대적으로 희귀
-  { type: 'calcite',      weight: 3 }, // 방해석(석회암 주성분)
-  { type: 'feldspar',     weight: 10 },// 지각 내 가장 풍부한 광물군
-  { type: 'mica',         weight: 3 },
-  { type: 'pyrite',       weight: 1 },
-  { type: 'quartz',       weight: 8 }, // 장석 다음으로 풍부
-  { type: 'sapphire',     weight: 1 }, // 희귀 보석
+  // 광물(또는 보석/준보석) (총 0.2000)
+  { type: 'agate',        weight: 0.0043 },
+  { type: 'calcite',      weight: 0.0130 },
+  { type: 'feldspar',     weight: 0.0435 },
+  { type: 'mica',         weight: 0.0130 },
+  { type: 'pyrite',       weight: 0.0043 },
+  { type: 'quartz',       weight: 0.0348 },
+  { type: 'sapphire',     weight: 0.0043 },
+  { type: 'bauxite',      weight: 0.0087 },
+  { type: 'cassiterite',  weight: 0.0043 },
+  { type: 'chalcopyrite', weight: 0.0087 },
+  { type: 'cinnabar',     weight: 0.0087 },
+  { type: 'galena',       weight: 0.0043 },
+  { type: 'gold',         weight: 0.0043 },
+  { type: 'hematite',     weight: 0.0130 },
+  { type: 'magnetite',    weight: 0.0130 },
+  { type: 'malachite',    weight: 0.0087 },
+  { type: 'sphalerite',   weight: 0.0087 },
 ];
 
 export function getRandomStoneType() {

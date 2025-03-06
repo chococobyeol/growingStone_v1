@@ -11,7 +11,9 @@ export function getStoneImagePath(stoneType: string | undefined): string {
     'chert', 'diorite', 'dolomite', 'gabbro', 'marl', 'obsidian',
     'pumice', 'rhyolite', 'scoria', 'slate',
     // 오늘 추가한 돌 타입들
-    'agate', 'calcite', 'feldspar', 'marble', 'mica', 'pegmatite', 'pyrite', 'quartz', 'sapphire', 'schist'
+    'agate', 'calcite', 'feldspar', 'marble', 'mica', 'pegmatite', 'pyrite', 'quartz', 'sapphire', 'schist',
+    // 신규 추가된 광물 이미지 타입들
+    'bauxite', 'cassiterite', 'chalcopyrite', 'cinnabar', 'galena', 'gold', 'hematite', 'magnetite', 'malachite', 'sphalerite'
   ];
   
   if (validTypes.includes(stoneType)) {
