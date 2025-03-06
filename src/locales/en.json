@@ -278,5 +278,8 @@
   "privacySection6Name": "Growstone",
   "privacySection6Email": "Email: chococobyeol@gmail.com",
   "privacySection7Content": "This Privacy Policy will be effective as of March 2, 2025.",
-  "otherDeviceLoginAlert": "Session error. This device will now be logged out."
+  "otherDeviceLoginAlert": "Session error. This device will now be logged out.",
+  "showAcquisitionProbability": "Show Acquisition Probability",
+  "noStonesAcquired": "No stones acquired",
+  "acquisitionProbability": "Current Acquisition Probability"
 }
