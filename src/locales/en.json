@@ -15,6 +15,11 @@
   "catalog": "Catalog",
   "market": {
     "label": "Market",
+    "cancelListing": {
+      "success": "Listing cancelled successfully.",
+      "refundFailure": "Refund failed.{error}",
+      "genericError": "An error occurred during listing cancellation.{error}"
+    },
     "createListing": {
       "buyNowPriceRequired": "You must enter a price.",
       "invalidStoneOwnership": "Either you do not own this stone or the stone information could not be found.",

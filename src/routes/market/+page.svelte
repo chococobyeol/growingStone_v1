@@ -663,7 +663,7 @@
   
   .stone-type, .stone-size {
     display: inline-block;
-    margin-right: 0.5rem;
+    margin-right: 0.0rem;
   }
   
   .price-info {
