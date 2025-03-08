@@ -553,6 +553,38 @@
       console.error("로그인된 사용자가 없습니다.");
       return;
     }
+    const userId = sessionData.session.user.id;
+    
+    // 보관함 내 돌 개수 조회 (count가 null일 수 있으므로 처리)
+    const { count, error: countError } = await supabase
+      .from('stones')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (countError) {
+      console.error("보관함의 돌 개수 조회 실패:", countError);
+      return;
+    }
+    const currentCount = count ?? 0;  // count가 null이면 0으로 간주함
+    
+    // 프로필에서 storage_limit 값을 조회
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('storage_limit')
+      .eq('id', userId)
+      .single();
+    if (profileError || !profile) {
+      console.error("프로필 정보 불러오기 실패:", profileError);
+      return;
+    }
+    const storageLimit = profile.storage_limit;
+    
+    // 보관함이 가득 찼으면 새로운 돌 생성하지 않음
+    if (currentCount >= storageLimit) {
+      console.log("보관함이 가득 찼습니다. 새로운 돌 생성 중단");
+      return;
+    }
+    
+    // 보관함에 여유가 있을 때만 돌 생성 로직 진행
     const randomType = getRandomStoneType();
     const newStone = {
       id: crypto.randomUUID(),
@@ -560,14 +592,13 @@
       size: 1,
       name: randomType,
       discovered_at: new Date().toISOString(),
-      user_id: sessionData.session.user.id,
+      user_id: userId,
       totalElapsed: 0
     };
     const { data, error } = await supabase.from('stones').insert(newStone).select();
     if (error) {
       console.error("돌 뽑기 실패:", error);
     } else {
-      // console.log("돌 뽑기 성공:", data);
       await recordAcquiredStone(randomType);
     }
   }
