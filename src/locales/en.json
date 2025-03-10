@@ -53,6 +53,7 @@
   "sizeAscending": "Size (Low to High)",
   "sizeDescending": "Size (High to Low)",
   "nameOrder": "Name",
+  "typeOrder": "Type",
   "noStonesOnSale": "No stones on sale.",
   "sellStoneButton": "Sell Stone",
   "marketStoneLoadError": "Cannot load stones that are listed in the market. Cancel the listing first and try again.",

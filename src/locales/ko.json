@@ -54,6 +54,7 @@
   "sizeAscending": "크기 오름차순",
   "sizeDescending": "크기 내림차순",
   "nameOrder": "이름순",
+  "typeOrder": "종류순",
   "noStonesOnSale": "판매 중인 돌이 없습니다.",
   "sellStoneButton": "돌 판매하기",
   "marketStoneLoadError": "마켓에 등록된 돌은 불러올 수 없습니다. 마켓에서 취소 후 다시 시도하세요.",

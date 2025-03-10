@@ -32,6 +32,27 @@
   // 기본 보관함 슬롯 수 (초기값). 필요에 따라 수정 가능.
   const BASE_STORAGE_LIMIT = 100;
 
+  // 정렬 옵션: 저장순(default), 이름순, 크기 오름차순, 크기 내림차순, 종류순
+  let selectedSortOption: 'default' | 'name' | 'sizeAsc' | 'sizeDesc' | 'type' = 'default';
+  $: sortedOthers = (() => {
+    const cur = $currentStone;
+    if (!cur) return storedStones;
+    const others = storedStones.filter(s => s.id !== cur.id);
+    if (selectedSortOption === 'name') {
+      others.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (selectedSortOption === 'sizeAsc') {
+      others.sort((a, b) => a.size - b.size);
+    } else if (selectedSortOption === 'sizeDesc') {
+      others.sort((a, b) => b.size - a.size);
+    } else if (selectedSortOption === 'type') {
+      others.sort((a, b) => a.type.localeCompare(b.type));
+    } else {
+      // default: 저장순 - discovered_at 내림차순 (최신 순)
+      others.sort((a, b) => new Date(b.discovered_at).getTime() - new Date(a.discovered_at).getTime());
+    }
+    return others;
+  })();
+
   function toggleDetailedSize(id: string) {
     detailedSizeStates = { ...detailedSizeStates, [id]: !detailedSizeStates[id] };
   }
@@ -127,9 +148,7 @@
 
   // 보관함 확장 기능 구현: 한 칸 확장할 때마다 비용이 발생 (비용 = floor(100 * 1.05^(현재칸수 - 기본칸수)))
   async function expandStorage() {
-    // 확장 비용 계산
     const cost = Math.floor(100 * Math.pow(1.05, (storageLimit - BASE_STORAGE_LIMIT)));
-    // TS 에러를 피하기 위해 $t의 인자 객체를 사용하지 않고 문자열을 나누어 결합합니다.
     const confirmed = confirm(
       `${$t('expandStorageConfirmPrefix')}${cost.toLocaleString()}${$t('expandStorageConfirmSuffix')}`
     );
@@ -142,7 +161,6 @@
     }
     const userId = sessionData.session.user.id;
     
-    // 프로필에서 현재 balance와 storage_limit 조회
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('storage_limit, balance')
@@ -176,9 +194,7 @@
     }
   }
 
-  // 불러오기(스왑) 버튼 클릭 시, 현재 돌과 저장된 돌을 서로 교환합니다.
   async function swapStone(stone: Stone) {
-    // 마켓에 등록된 돌인지 확인
     if (stone.market_listings && stone.market_listings.length > 0 && 
         stone.market_listings.some(listing => listing.status === 'active')) {
       errorMsg = $t('marketStoneLoadError');
@@ -202,7 +218,6 @@
         discovered_at: new Date().toISOString()
       };
 
-      // 현재 돌 업데이트
       const { error: errorCurrent } = await supabase
         .from('stones')
         .update(updateForCurrent)
@@ -211,17 +226,14 @@
         throw new Error(errorCurrent.message);
       }
 
-      // 선택한 돌 업데이트
       const { error: errorStored } = await supabase
         .from('stones')
         .update(updateForStored)
         .eq('id', stone.id);
       if (errorStored) {
-        // 여기서 롤백하는 로직을 추가할 수 있음 (예: 다시 current 돌을 원래대로 복구)
         throw new Error(errorStored.message);
       }
 
-      // 클라이언트 상태 업데이트
       currentStone.set({
         id: stone.id,
         type: stone.type,
@@ -233,12 +245,10 @@
       goto('/');
     } catch (error) {
       errorMsg = (error as Error).message;
-      // 추가: 사용자에게 에러 메시지를 표시하고, 필요시 상태 롤백 처리를 구현
     }
   }
 
   async function deleteStone(stone: Stone) {
-    // 마켓에 등록된 돌인지 확인
     if (stone.market_listings && stone.market_listings.length > 0 && 
         stone.market_listings.some(listing => listing.status === 'active')) {
       errorMsg = $t('marketStoneDeleteError');
@@ -246,7 +256,6 @@
     }
     
     const translate = get(t);
-    // 삭제 경고 설정이 true일 경우에만 확인 대화상자를 표시합니다.
     if (get(showDeleteWarning)) {
       if (!confirm(translate('deleteStoneConfirm'))) return;
     }
@@ -261,7 +270,6 @@
       await loadStoredStones();
     } catch (error) {
       errorMsg = (error as Error).message;
-      // 에러 발생 시 사용자에게 알림
     }
   }
 
@@ -288,7 +296,6 @@
         return;
       }
       
-      // 실시간 구독: 현재 사용자의 stones 테이블 변경 이벤트만 감지
       stonesSubscription = supabase
         .channel('stones-storage')
         .on(
@@ -352,7 +359,7 @@
     <p>{$t('noStoredStones')}</p>
   {:else}
     <ul>
-      {#each storedStones as stone}
+      {#each storedStones.filter(s => s.id === $currentStone.id) as stone (stone.id)}
         <li>
           <div class="stone-item">
             <img
@@ -363,7 +370,7 @@
             />
             <div class="stone-details">
               <p class="details-line">
-                <strong style="font-size: 1.2em;">{stone.name}</strong> 
+                <strong style="font-size: 1.2em;">{stone.name}</strong>
               </p>
               <p class="details-line">
                 <strong>{$t('typeLabel')}:</strong> {$t(`stoneTypes.${stone.type}`)}
@@ -377,7 +384,8 @@
                   on:click|stopPropagation|preventDefault={() => toggleDetailedSize(stone.id)}
                   on:keydown|stopPropagation|preventDefault={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') toggleDetailedSize(stone.id);
-                  }}>
+                  }}
+                >
                   {detailedSizeStates[stone.id] ? stone.size.toFixed(15) : stone.size.toFixed(4)}
                 </span>
               </p>
@@ -404,6 +412,68 @@
           </div>
         </li>
       {/each}
+
+      {#if storedStones.filter(s => s.id !== $currentStone.id).length > 0}
+        <li class="sort-row">
+          <div class="sort-options">
+            <label for="sortSelect">{$t('sortBy')}:</label>
+            <select id="sortSelect" bind:value={selectedSortOption}>
+              <option value="default">{$t('latestFirst')}</option>
+              <option value="name">{$t('nameOrder')}</option>
+              <option value="sizeAsc">{$t('sizeAscending')}</option>
+              <option value="sizeDesc">{$t('sizeDescending')}</option>
+              <option value="type">{$t('typeOrder')}</option>
+            </select>
+          </div>
+        </li>
+        {#each sortedOthers as stone (stone.id)}
+          <li>
+            <div class="stone-item">
+              <img
+                class="stone-img"
+                src={getStoneImagePath(stone.type)}
+                alt={$t(`stoneTypes.${stone.type}`)}
+                on:error={handleImageError}
+              />
+              <div class="stone-details">
+                <p class="details-line">
+                  <strong style="font-size: 1.2em;">{stone.name}</strong>
+                </p>
+                <p class="details-line">
+                  <strong>{$t('typeLabel')}:</strong> {$t(`stoneTypes.${stone.type}`)}
+                </p>
+                <p class="details-line">
+                  <strong>{$t('sizeLabel')}:</strong>
+                  <span
+                    role="button"
+                    tabindex="0"
+                    class="detailed-size-toggle"
+                    on:click|stopPropagation|preventDefault={() => toggleDetailedSize(stone.id)}
+                    on:keydown|stopPropagation|preventDefault={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') toggleDetailedSize(stone.id);
+                    }}
+                  >
+                    {detailedSizeStates[stone.id] ? stone.size.toFixed(15) : stone.size.toFixed(4)}
+                  </span>
+                </p>
+                <p class="details-line">
+                  <strong>{$t('totalGrowthTimeLabel')}:</strong> {stone.totalElapsed || 0}s
+                </p>
+                <p class="details-line">
+                  <strong>{$t('savedAt')}:</strong> {new Date(stone.discovered_at).toLocaleString()}
+                </p>
+                {#if stone.market_listings && stone.market_listings.length > 0 && stone.market_listings.some(listing => listing.status === 'active')}
+                  <span style="color: orange; font-weight: bold;"> {$t('marketRegistered')}</span>
+                {/if}
+              </div>
+            </div>
+            <div class="stone-actions">
+              <button class="swap" on:click={() => swapStone(stone)}>{$t('loadButton')}</button>
+              <button class="delete" on:click={() => deleteStone(stone)}>{$t('throwAwayButton')}</button>
+            </div>
+          </li>
+        {/each}
+      {/if}
     </ul>
   {/if}
 
@@ -481,6 +551,7 @@
     background: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
+  
   .stone-item {
     display: flex;
     align-items: center;
@@ -575,5 +646,25 @@
     vertical-align: middle;
     margin-right: 0.5rem;
     margin-left: 0.5rem;
+  }
+  /* 정렬 드롭다운 영역 */
+  .sort-row {
+    border: none;
+    background: transparent;
+    padding: 0.5rem;
+    text-align: center;
+    box-shadow: none; /* 그림자 제거 */
+  }
+  /* 정렬 옵션 드롭다운 셀렉트 */
+  .sort-options select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+    box-shadow: none; /* 그림자 제거 */
+  }
+  .sort-options label {
+    margin-right: 0.5rem;
+    font-weight: bold;
   }
 </style>

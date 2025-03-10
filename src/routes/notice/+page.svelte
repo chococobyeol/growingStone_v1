@@ -32,10 +32,6 @@
   });
 </script>
 
-<svelte:head>
-  <title>{$t('notice')}</title>
-</svelte:head>
-
 <div class="notice-container">
   <h1>{$t('notice')}</h1>
   {#if errorMsg}
