@@ -286,5 +286,7 @@
   "otherDeviceLoginAlert": "Session error. This device will now be logged out.",
   "showAcquisitionProbability": "Show Acquisition Probability",
   "noStonesAcquired": "No stones acquired",
-  "acquisitionProbability": "Current Acquisition Probability"
+  "acquisitionProbability": "Current Acquisition Probability",
+  "notice": "Notice",
+  "noNotices": "No notices"
 }

@@ -285,5 +285,7 @@
   "otherDeviceLoginAlert": "세션 오류로 로그아웃됩니다.",
   "showAcquisitionProbability": "획득 확률 보기",
   "noStonesAcquired": "획득한 돌이 없습니다.",
-  "acquisitionProbability": "현재 획득 확률"
+  "acquisitionProbability": "현재 획득 확률",
+  "notice": "공지사항",
+  "noNotices": "등록된 공지사항이 없습니다."
 }

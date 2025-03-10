@@ -954,6 +954,9 @@
         <button class="btn icon-btn" title="{$t('share')}" aria-label="{$t('share')}" on:click={handleShare}>
           <img src="/assets/icons/share.png" alt="{$t('share')}" />
         </button>
+        <button class="btn icon-btn" on:click={() => goto('/notice')} title="{$t('notice')}" aria-label="{$t('notice')}">
+          <img src="/assets/icons/notice.png" alt="{$t('notice')}" />
+        </button>
         <button class="btn icon-btn" on:click={() => goto('/help')} title="{$t('help')}" aria-label="{$t('help')}">
           <img src="/assets/icons/help.png" alt="{$t('help')}" />
         </button>

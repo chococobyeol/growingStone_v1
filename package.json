@@ -43,6 +43,7 @@
 	},
 	"dependencies": {
 		"@supabase/supabase-js": "^2.49.1",
+		"marked": "^15.0.7",
 		"svelte-i18n": "^4.0.1"
 	}
 }
