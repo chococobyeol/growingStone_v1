@@ -468,8 +468,10 @@
               </div>
             </div>
             <div class="stone-actions">
-              <button class="swap" on:click={() => swapStone(stone)}>{$t('loadButton')}</button>
-              <button class="delete" on:click={() => deleteStone(stone)}>{$t('throwAwayButton')}</button>
+              {#if !stone.market_listings || !stone.market_listings.some(listing => listing.status === 'active')}
+                <button class="swap" on:click={() => swapStone(stone)}>{$t('loadButton')}</button>
+                <button class="delete" on:click={() => deleteStone(stone)}>{$t('throwAwayButton')}</button>
+              {/if}
             </div>
           </li>
         {/each}
