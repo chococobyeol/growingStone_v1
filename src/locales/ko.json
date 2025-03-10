@@ -48,6 +48,7 @@
   "buy": "구매하기",
   "mySalesList": "내 판매 목록",
   "searchByNameOrType": "돌 이름이나 종류로 검색",
+  "defaultSortOption": "보관함 기본 정렬 기준",
   "sortBy": "정렬 기준",
   "latestFirst": "최신순",
   "expiryImminent": "마감임박순",

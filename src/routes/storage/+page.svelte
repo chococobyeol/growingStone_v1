@@ -6,7 +6,7 @@
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
   import type { RealtimeChannel } from '@supabase/supabase-js';
-  import { showDeleteWarning } from '$lib/settingsStore';
+  import { showDeleteWarning, defaultSortOption } from '$lib/settingsStore';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
 
   // DB에 저장된 돌 데이터 타입 (DB의 size는 현재 돌의 baseSize에 해당)
@@ -32,8 +32,8 @@
   // 기본 보관함 슬롯 수 (초기값). 필요에 따라 수정 가능.
   const BASE_STORAGE_LIMIT = 100;
 
-  // 정렬 옵션: 저장순(default), 이름순, 크기 오름차순, 크기 내림차순, 종류순
-  let selectedSortOption: 'default' | 'name' | 'sizeAsc' | 'sizeDesc' | 'type' = 'default';
+  // 기본 정렬 옵션을 settingsStore에서 받아 초기값으로 사용
+  let selectedSortOption: 'default' | 'name' | 'sizeAsc' | 'sizeDesc' | 'type' = $defaultSortOption;
   $: sortedOthers = (() => {
     const cur = $currentStone;
     if (!cur) return storedStones;

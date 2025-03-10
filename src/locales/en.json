@@ -225,6 +225,7 @@
   "buyTab": "Buy",
   "sellTab": "Sell",
   "searchPlaceholder": "Search by name or type",
+  "defaultSortOption": "Storage Default Sort Option",
   "sortByCreated": "Latest",
   "sortByExpiry": "Ending Soon",
   "sortBySizeAsc": "Size (Low to High)",

@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { setLanguage } from '$lib/i18n';
   import { t } from 'svelte-i18n';
-  import { showDeleteWarning } from '$lib/settingsStore';
+  import { showDeleteWarning, defaultSortOption } from '$lib/settingsStore';
 </script>
 
 <div class="settings-container">
@@ -23,12 +23,30 @@
       {$t('enableDeleteWarning')}
     </label>
   </div>
+
+  <div class="sort-settings">
+    <h2>{$t('defaultSortOption')}</h2>
+    <div class="sort-row">
+      <div class="sort-options">
+        <select bind:value={$defaultSortOption}>
+          <option value="default">{$t('latestFirst')}</option>
+          <option value="name">{$t('nameOrder')}</option>
+          <option value="sizeAsc">{$t('sizeAscending')}</option>
+          <option value="sizeDesc">{$t('sizeDescending')}</option>
+          <option value="type">{$t('typeOrder')}</option>
+        </select>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 뒤로 버튼을 보관함과 동일한 위치에 고정 -->
 <button class="back-btn" on:click={() => goto('/')}>{$t('backButton')}</button>
 
 <style>
+  h2{
+    margin-top: 2.5rem;
+  }
   .settings-container {
     max-width: 600px;
     margin: 2rem auto;
@@ -36,7 +54,8 @@
     text-align: center;
   }
   .language-settings,
-  .delete-warning-settings {
+  .delete-warning-settings,
+  .sort-settings {
     margin: 1rem 0;
   }
 
@@ -86,5 +105,21 @@
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+  }
+
+  /* 드롭다운 메뉴 부분만 보관함 페이지의 스타일과 동일하게 수정 */
+  .sort-row {
+    border: none;
+    background: transparent;
+    padding: 0rem;
+    text-align: center;
+    box-shadow: none; /* 그림자 제거 */
+  }
+  .sort-options select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+    box-shadow: none; /* 그림자 제거 */
   }
 </style>
