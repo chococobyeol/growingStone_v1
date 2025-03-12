@@ -17,25 +17,7 @@
       if (error) {
         errorMsg = error.message;
       } else {
-        // 로그인 성공 시 getSession() 호출하여 현재 세션 정보를 받아옵니다.
-        const sessionResponse = await supabase.auth.getSession();
-        if (sessionResponse.data.session) {
-          // 고유한 activeSession ID 생성 (UUID 사용)
-          const activeSession = crypto.randomUUID();
-          // 로컬 스토리지에 activeSession 저장
-          localStorage.setItem('activeSession', activeSession);
-  
-          const userId = sessionResponse.data.session.user.id;
-          // profile 테이블의 active_session 컬럼 업데이트
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ active_session: activeSession })
-            .eq('id', userId);
-          if (updateError) {
-            console.error("active_session 업데이트 실패:", updateError.message);
-          }
-        }
-        // 로그인 성공 후 게임 화면(루트 경로)로 이동
+        // 로그인 성공 후 별도 active_session 처리는 제거하고 바로 화면 이동합니다.
         goto('/');
       }
     }
@@ -44,7 +26,6 @@
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          // 인증 완료 후 https://growingstone.onrender.com/으로 리디렉션됨
           redirectTo: 'https://growingstone.onrender.com/'
         }
       });

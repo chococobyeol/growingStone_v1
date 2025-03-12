@@ -310,47 +310,6 @@
   let stonesSubscription: RealtimeChannel;
 
   onMount(() => {
-    // -----------------------
-    // Active Session 관리 로직
-    // -----------------------
-    let myActiveSession = localStorage.getItem('activeSession');
-    if (!myActiveSession && get(isPrimary)) {
-      myActiveSession = crypto.randomUUID();
-      localStorage.setItem('activeSession', myActiveSession);
-      updateActiveSessionInProfile(myActiveSession);
-    }
-
-    function storageHandler(e: StorageEvent) {
-      if (e.key === 'activeSession' && e.newValue === null && get(isPrimary)) {
-        if (!document.hidden) {
-          myActiveSession = crypto.randomUUID();
-          localStorage.setItem('activeSession', myActiveSession);
-          updateActiveSessionInProfile(myActiveSession);
-        }
-      }
-    }
-    window.addEventListener('storage', storageHandler);
-
-    function beforeUnloadHandler() {
-      const stone = get(currentStone);
-      const payload = JSON.stringify({
-        id: stone.id,
-        type: stone.type,
-        size: stone.baseSize,
-        totalElapsed: stone.totalElapsed || 0,
-        countdown // 다음 돌까지 남은 시간 (초 단위)
-        // 필요시 여기서 경험치 등 추가 데이터 포함 가능
-      });
-      // 페이지 종료 시 동기적으로 데이터 전송
-      navigator.sendBeacon('/api/saveStoneState', payload);
-
-      // primary 창일 때만 activeSession 제거
-      if (get(isPrimary) && localStorage.getItem('activeSession') === myActiveSession) {
-        localStorage.removeItem('activeSession');
-      }
-    }
-    window.addEventListener('beforeunload', beforeUnloadHandler);
-
     // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
       await loadUserStone();
@@ -384,12 +343,6 @@
     const drawPeriod = 3600; // 돌 뽑기 주기 (초)
 
     function updateLoop(currentTime: number) {
-      // primary 창이 아닌 경우 업데이트 로직 건너뛰기
-      if (!get(isPrimary)) {
-        animationFrameId = requestAnimationFrame(updateLoop);
-        return;
-      }
-  
       const elapsedTime = currentTime - lastUpdateTime;
       const elapsedSeconds = Math.floor(elapsedTime / 1000);
       if (elapsedSeconds > 0) {
@@ -482,8 +435,6 @@
     return () => {
       cancelAnimationFrame(animationFrameId);
       supabase.removeChannel(stonesSubscription);
-      window.removeEventListener('storage', storageHandler);
-      window.removeEventListener('beforeunload', beforeUnloadHandler);
     };
   });
 
@@ -620,27 +571,6 @@
     imgElement.src = getDefaultImagePath();
     imgElement.onerror = null; // 무한 루프 방지
   }
-
-  // ------------------------------------------------------------------
-  // active session 업데이트 함수: 프로필의 active_session 컬럼 갱신
-  async function updateActiveSessionInProfile(activeSession: string) {
-    const { data: sessionData, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error('세션 로드 실패:', error.message);
-      return;
-    }
-    if (sessionData?.session?.user) {
-      const userId = sessionData.session.user.id;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ active_session: activeSession })
-        .eq('id', userId);
-      if (updateError) {
-        console.error('active_session 업데이트 실패:', updateError.message);
-      }
-    }
-  }
-  // ------------------------------------------------------------------
 </script>
 
 <style>

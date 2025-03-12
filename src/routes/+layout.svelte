@@ -18,15 +18,10 @@
 	});
   
 	let user: User | null = null;
-	let logoutTriggered = false; // 로그아웃이 이미 실행되었는지 여부
   
 	// store 구독을 통해 로그인 상태를 받아옴
 	const unsubscribe = session.subscribe((currentSession) => {
 	  user = currentSession ? currentSession.user : null;
-	  // 세션이 사라지면 플래그 초기화
-	  if (!currentSession) {
-		logoutTriggered = false;
-	  }
 	});
   
 	onDestroy(() => {
@@ -39,99 +34,13 @@
 	let browserId: string = "";
   
 	async function logout() {
-	  const { data: sessionData } = await supabase.auth.getSession();
-	  if (!sessionData?.session) {
-		session.set(null);
-		localStorage.removeItem('activeSession');
-		goto('/');
-		return;
-	  }
-	  if (activeSessionSubscription) {
-		supabase.removeChannel(activeSessionSubscription);
-	  }
-	  // 추가: 로그아웃하기 전에 현재 세션의 active_session을 DB에서 초기화
-	  const { error: clearError } = await supabase
-		.from('profiles')
-		.update({ active_session: null })
-		.eq('id', sessionData.session.user.id);
-	  if (clearError) {
-		console.warn("로그아웃 전 active_session 초기화 실패:", clearError.message);
-	  }
 	  const { error } = await supabase.auth.signOut();
-	  if (error) {
-		if (error.message === 'Auth session missing!') {
-		  console.warn("세션이 이미 만료되어 강제 로그아웃 처리합니다.");
-		} else {
-		  console.error("로그아웃 실패:", error.message);
-		  return;
-		}
-	  }
-	  // 클라이언트 상태 초기화 (세션, localStorage 등)
-	  session.set(null);
-	  localStorage.removeItem('activeSession');
-	  goto('/');
-	}
-  
-	// activeSessionSubscription 변수의 타입을 명시합니다.
-	let activeSessionSubscription: RealtimeChannel | null = null;
-  
-	// 실시간 구독: active_session 값이 변경되면 체크
-	$: if (user) {
-	  const userId = user.id;
-	  activeSessionSubscription = supabase
-		.channel('active-session')
-		.on(
-		  'postgres_changes',
-		  {
-			event: 'UPDATE',
-			schema: 'public',
-			table: 'profiles',
-			filter: `id=eq.${userId}`
-		  },
-		  (payload: any) => {
-			if (!get(isPrimary)) return;
-			const newActiveSession = payload.new.active_session;
-			const localActiveSession = localStorage.getItem('activeSession');
-			if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
-			  logoutTriggered = true;
-			  alert($t('otherDeviceLoginAlert'));
-			  logout();
-			}
-		  }
-		)
-		.subscribe();
-	} else {
-	  // user가 없을 때 기존 구독 해제
-	  if (activeSessionSubscription) {
-		supabase.removeChannel(activeSessionSubscription);
-	  }
-	}
-  
-	onDestroy(() => {
-	  if (activeSessionSubscription) {
-		supabase.removeChannel(activeSessionSubscription);
-	  }
-	});
-
-	// active_session 업데이트 함수 추가
-	async function updateActiveSession() {
-	  const { data: sessionData, error } = await supabase.auth.getSession();
-	  if (error) {
-		console.error('세션 로드 실패:', error.message);
+	  if (error && error.message !== 'Auth session missing!') {
+		console.error("로그아웃 실패:", error.message);
 		return;
 	  }
-	  if (sessionData?.session && get(isPrimary)) {
-		// primary 탭에서는 모든 탭이 공유하는 browserId로 업데이트하여 같은 브라우저 내에서 값 불일치를 방지함
-		const activeSession = browserId;
-		localStorage.setItem('activeSession', activeSession);
-		const { error: updateError } = await supabase
-		  .from('profiles')
-		  .update({ active_session: activeSession })
-		  .eq('id', sessionData.session.user.id);
-		if (updateError) {
-		  console.error("active_session 업데이트 실패:", updateError.message);
-		}
-	  }
+	  session.set(null);
+	  goto('/');
 	}
   
 	// 페이지 로드시 및 일정 주기로 active_session을 업데이트합니다.
@@ -146,8 +55,6 @@
 	      localStorage.setItem('browserId', browserId);
 	    }
 	  }
-	  
-	  updateActiveSession();
 	  
 	  // 기존의 폴링 및 구독 로직 (하나만 유지)
 	  const interval = setInterval(async () => {
@@ -166,9 +73,7 @@
 		  }
 		  const newActiveSession = profileData.active_session;
 		  const localActiveSession = localStorage.getItem('activeSession');
-		  if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession && !logoutTriggered) {
-			logoutTriggered = true;
-			alert($t('otherDeviceLoginAlert'));
+		  if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession) {
 			logout();
 		  }
 		}
@@ -184,7 +89,7 @@
 	  const handleVisibilityChange = () => {
 		if (document.visibilityState === 'visible' && get(isPrimary)) {
 		  // 탭이 활성화될 때 active_session 업데이트 실행
-		  updateActiveSession();
+		  logout();
 		}
 	  };
 	  document.addEventListener('visibilitychange', handleVisibilityChange);
