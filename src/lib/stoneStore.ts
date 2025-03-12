@@ -1,13 +1,14 @@
 import { writable } from 'svelte/store';
 
-export type StoneType = {
+export interface StoneType {
   id: string;
   type: string;
   baseSize: number;
   name: string;
   totalElapsed?: number;
   last_updated?: string;
-};
+  manualEdit?: boolean;
+}
 
 const weightedStoneTypes = [
   // 주로 화성암 (총 0.2000)

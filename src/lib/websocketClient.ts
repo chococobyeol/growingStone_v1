@@ -58,13 +58,16 @@ export function flushStoneUpdates(): Promise<void> {
     if (socket) {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(msg);
-        // 서버에서 pending 업데이트를 처리할 시간을 주기 위해 약간의 지연 후 resolve합니다.
+        // pending 메시지 큐를 즉시 비웁니다.
+        messageQueue = [];
+        // 서버에서 업데이트를 즉시 처리할 시간을 주기 위해 약간의 지연 후 resolve합니다.
         setTimeout(resolve, 500);
       } else if (socket.readyState === WebSocket.CONNECTING) {
         messageQueue.push(msg);
         socket.addEventListener(
           'open',
           () => {
+            messageQueue = [];
             setTimeout(resolve, 500);
           },
           { once: true }
@@ -78,6 +81,11 @@ export function flushStoneUpdates(): Promise<void> {
       resolve();
     }
   });
+}
+
+// 추가: 현재 클라이언트의 pending 메시지 큐만 클리어하는 함수
+export function clearLocalMessageQueue() {
+  messageQueue = [];
 }
 
 export default socket;

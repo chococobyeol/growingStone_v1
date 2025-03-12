@@ -11,7 +11,7 @@
   import { checkAttendance } from '$lib/attendanceUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import { isPrimary } from '$lib/activeSessionManager';
-  import { sendStoneUpdate, flushStoneUpdates } from '$lib/websocketClient';
+  import { sendStoneUpdate, flushStoneUpdates, clearLocalMessageQueue } from '$lib/websocketClient';
 
   /* =====================
    * 1) 돌 정보 & 성장 로직
@@ -58,12 +58,24 @@
   */
 
   // 돌 이름 수정 함수 (번역 적용)
-  function editStoneName() {
+  async function editStoneName() {
     const stone = get(currentStone);
     const translate = get(t);
     const newName = prompt(translate('changeStoneNamePrompt'), stone.name);
     if (newName && newName.trim() !== '') {
-      currentStone.set({ ...stone, name: newName });
+      const updatedStone = {
+        ...stone,
+        name: newName,
+        last_updated: new Date().toISOString()
+      };
+      currentStone.set(updatedStone);
+      const { error } = await supabase
+        .from('stones')
+        .update({ name: newName, last_updated: updatedStone.last_updated })
+        .eq('id', stone.id);
+      if (error) {
+        console.error("DB 업데이트 실패:", error);
+      }
     }
   }
 
@@ -222,8 +234,18 @@
     }
     const userId = sessionData.session.user.id;
     const stone = get(currentStone);
-    // 최신 업데이트 시각을 강제로 설정합니다.
-    const updateData = { ...stone, user_id: userId, last_updated: new Date().toISOString() };
+    const updateData: any = {
+      id: stone.id,
+      type: stone.type,
+      size: stone.baseSize,
+      totalElapsed: stone.totalElapsed,
+      user_id: userId,
+      last_updated: new Date().toISOString()
+    };
+    // 수동 편집으로 이름이 변경된 경우, autoUpdate에서는 돌 이름을 덮어쓰지 않습니다.
+    if (!stone.manualEdit) {
+      updateData.name = stone.name;
+    }
     sendStoneUpdate(updateData);
   }
 
@@ -396,6 +418,7 @@
     // SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
     beforeNavigate(async () => {
       await autoUpdateStone();
+      await flushStoneUpdates();
     });
 
     // Supabase 실시간 채널 구독 등 기존 로직 유지
@@ -460,34 +483,56 @@
     }, timeUntilMidnight);
   }
   */
-async function logout() {
-  // 최신 stone 업데이트를 전송합니다.
-  await autoUpdateStone();
-  
-  // autoUpdateStone에서 보낸 최신 업데이트가 WS 서버 큐에 있다면, 이를 강제로 처리합니다.
-  await flushStoneUpdates();
 
-  
-  // stone 객체의 last_updated 값이 있어야 합니다.
-  const stone = get(currentStone);
-  if (!stone.last_updated) {
-    console.error("Stone의 last_updated 값이 undefined입니다.");
-    return;
+  // 즉시 DB 업데이트 함수 (WS를 사용하지 않고 직접 supabase API를 호출)
+  async function immediateStoneUpdate() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션 가져오기 실패:", sessionError);
+      return;
+    }
+    if (!sessionData?.session?.user) {
+      console.error("로그인된 사용자가 없습니다.");
+      return;
+    }
+    const userId = sessionData.session.user.id;
+    const stone = get(currentStone);
+    const updateData = {
+      id: stone.id,
+      type: stone.type,
+      size: stone.baseSize,
+      totalElapsed: stone.totalElapsed,
+      user_id: userId,
+      last_updated: new Date().toISOString(),
+      name: stone.name
+    };
+    const { error } = await supabase
+      .from('stones')
+      .upsert(updateData);
+    if (error) {
+      console.error("즉각 DB 업데이트 실패:", error);
+    } else {
+      console.log("즉각 DB 업데이트 성공");
+    }
   }
-  const expectedTimestamp = stone.last_updated;
-  
-  // DB가 최신 상태(업데이트된 last_updated)를 반영할 때까지 폴링합니다.
-  await waitForDBUpdate(stone.id, expectedTimestamp);
-  
 
-  // DB 업데이트 반영이 확인되면 로그아웃을 진행합니다.
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.error('로그아웃 실패:', error);
-  } else {
-    goto('/login');
+  // 예시: 로그아웃 시 직접 DB 업데이트 후, 로컬 pending 메시지 삭제
+  async function logout() {
+    await immediateStoneUpdate();
+    clearLocalMessageQueue();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('로그아웃 실패:', error);
+    } else {
+      goto('/login');
+    }
   }
-}
+
+  // 페이지 이동 전에도 즉시 DB 업데이트를 수행하도록 수정 (flushStoneUpdates 대신)
+  beforeNavigate(async () => {
+    await immediateStoneUpdate();
+    clearLocalMessageQueue();
+  });
 
   async function saveStone() {
     // 더 이상 사용하지 않을 저장 기능

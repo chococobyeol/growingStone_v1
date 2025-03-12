@@ -28,9 +28,13 @@ export const POST: RequestHandler = async ({ request }) => {
       type,
       size,
       totalElapsed,
-      name: payload.name || 'default',
       last_updated: last_updated ? last_updated : new Date().toISOString()
     };
+
+    // payload에 name 필드가 명시적으로 전달될 경우에만 업데이트합니다.
+    if (payload.name !== undefined) {
+      upsertData.name = payload.name;
+    }
 
     if (!existingStone) {
       upsertData.discovered_at = new Date().toISOString();
@@ -52,7 +56,7 @@ export const POST: RequestHandler = async ({ request }) => {
       }
     }
 
-    return new Response(JSON.stringify({ message: 'Stone state saved successfully' }), { status: 200 });
+    return new Response(JSON.stringify({ message: 'Update successful' }), { status: 200 });
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Invalid request payload' }), { status: 400 });
   }
