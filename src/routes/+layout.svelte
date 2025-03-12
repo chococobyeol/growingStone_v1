@@ -55,33 +55,6 @@
 	      localStorage.setItem('browserId', browserId);
 	    }
 	  }
-	  
-	  // 기존의 폴링 및 구독 로직 (하나만 유지)
-	  const interval = setInterval(async () => {
-		if (user && get(isPrimary)) {
-		  const { data: sessionData } = await supabase.auth.getSession();
-		  if (!sessionData?.session?.user) return;
-		  const userId = sessionData.session.user.id;
-		  const { data: profileData, error } = await supabase
-			.from('profiles')
-			.select('active_session')
-			.eq('id', userId)
-			.single();
-		  if (error) {
-			console.error("프로필의 active_session 로드 실패:", error.message);
-			return;
-		  }
-		  const newActiveSession = profileData.active_session;
-		  const localActiveSession = localStorage.getItem('activeSession');
-		  if (localActiveSession && newActiveSession && localActiveSession !== newActiveSession) {
-			logout();
-		  }
-		}
-	  }, 5000);
-  
-	  return () => {
-		clearInterval(interval);
-	  };
 	});
 
 	// **추가 onMount:** 탭이 다시 활성화될 때 active_session 동기화 처리
