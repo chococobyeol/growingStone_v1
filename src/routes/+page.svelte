@@ -1,17 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import { goto } from '$app/navigation';
+  import { goto, beforeNavigate } from '$app/navigation';
   import { currentStone, getRandomStoneType } from '$lib/stoneStore';
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
-  import { beforeNavigate } from '$app/navigation';
   import type { RealtimeChannel } from '@supabase/supabase-js';
   import { updateUserXp } from '$lib/xpUtils';
   import { recordAcquiredStone } from '$lib/stoneCatalogUtils';
   import { checkAttendance } from '$lib/attendanceUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import { isPrimary } from '$lib/activeSessionManager';
+  import { sendStoneUpdate, flushStoneUpdates } from '$lib/websocketClient';
 
   /* =====================
    * 1) 돌 정보 & 성장 로직
@@ -129,7 +129,8 @@
         type: stoneData.type,
         baseSize: stoneData.size,
         totalElapsed: stoneData.totalElapsed || 0,
-        name: stoneData.name
+        name: stoneData.name,
+        last_updated: stoneData.last_updated || new Date().toISOString()
       };
       currentStone.set(loadedStone);
       computedSize = loadedStone.baseSize;
@@ -187,7 +188,8 @@
         type: createdStone.type,
         baseSize: createdStone.size,
         totalElapsed: createdStone.totalElapsed || 0,
-        name: createdStone.name
+        name: createdStone.name,
+        last_updated: createdStone.last_updated || new Date().toISOString()
       });
       computedSize = createdStone.size;
       
@@ -209,7 +211,6 @@
    * 4) 돌 성장 및 자동 저장 로직
    * ===================== */
   async function autoUpdateStone() {
-    const stone = get(currentStone);
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error("세션 가져오기 실패:", sessionError);
@@ -220,18 +221,10 @@
       return;
     }
     const userId = sessionData.session.user.id;
-    const { error } = await supabase.from('stones').upsert({
-      id: stone.id,
-      type: stone.type,
-      size: stone.baseSize,
-      totalElapsed: stone.totalElapsed || 0,
-      name: stone.name,
-      discovered_at: new Date().toISOString(),
-      user_id: userId
-    });
-    if (error) {
-      console.error("자동 저장 실패:", error);
-    }
+    const stone = get(currentStone);
+    // 최신 업데이트 시각을 강제로 설정합니다.
+    const updateData = { ...stone, user_id: userId, last_updated: new Date().toISOString() };
+    sendStoneUpdate(updateData);
   }
 
   /* =====================
@@ -467,28 +460,34 @@
     }, timeUntilMidnight);
   }
   */
+async function logout() {
+  // 최신 stone 업데이트를 전송합니다.
+  await autoUpdateStone();
+  
+  // autoUpdateStone에서 보낸 최신 업데이트가 WS 서버 큐에 있다면, 이를 강제로 처리합니다.
+  await flushStoneUpdates();
 
-  async function logoutHandler() {
-    const sessionResponse = await supabase.auth.getSession();
-    if (!sessionResponse.data.session) {
-      // console.log("현재 활성화된 세션이 없습니다. 이미 로그아웃 상태입니다.");
-      goto('/login');
-      return;
-    }
-
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      if (error.message === "Auth session missing!") {
-        // console.log("세션이 이미 만료되었거나 존재하지 않습니다. 로그인 페이지로 이동합니다.");
-        goto('/login');
-        return;
-      }
-      console.error("로그아웃 실패:", error.message);
-    } else {
-      // console.log("로그아웃 성공");
-      goto('/login');
-    }
+  
+  // stone 객체의 last_updated 값이 있어야 합니다.
+  const stone = get(currentStone);
+  if (!stone.last_updated) {
+    console.error("Stone의 last_updated 값이 undefined입니다.");
+    return;
   }
+  const expectedTimestamp = stone.last_updated;
+  
+  // DB가 최신 상태(업데이트된 last_updated)를 반영할 때까지 폴링합니다.
+  await waitForDBUpdate(stone.id, expectedTimestamp);
+  
+
+  // DB 업데이트 반영이 확인되면 로그아웃을 진행합니다.
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error('로그아웃 실패:', error);
+  } else {
+    goto('/login');
+  }
+}
 
   async function saveStone() {
     // 더 이상 사용하지 않을 저장 기능
@@ -570,6 +569,31 @@
     const imgElement = e.target as HTMLImageElement;
     imgElement.src = getDefaultImagePath();
     imgElement.onerror = null; // 무한 루프 방지
+  }
+
+  // DB 업데이트가 반영되었는지 확인하기 위해 폴링하는 함수
+  async function waitForDBUpdate(stoneId: string, expectedTimestamp: string, timeout = 5000, interval = 500): Promise<void> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const { data, error } = await supabase
+        .from('stones')
+        .select('last_updated')
+        .eq('id', stoneId)
+        .single();
+
+      if (error) {
+        console.error('DB 폴링 실패:', error);
+      } else if (data) {
+        const dbTimestamp = new Date(data.last_updated).getTime();
+        const expected = new Date(expectedTimestamp).getTime();
+        if (dbTimestamp >= expected) {
+          // 예상한 업데이트가 반영됨
+          return;
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+    console.warn('DB 업데이트 확인 타임아웃');
   }
 </script>
 
@@ -893,7 +917,7 @@
         <button class="btn icon-btn" on:click={() => goto('/settings')} title="{$t('settings')}" aria-label="{$t('settings')}">
           <img src="/assets/icons/settings.png" alt="{$t('settings')}" />
         </button>
-        <button class="btn logout-btn" on:click={logoutHandler}>{$t('logout')}</button>
+        <button class="btn logout-btn" on:click={logout}>{$t('logout')}</button>
       </div>
     </div>
   {/if}

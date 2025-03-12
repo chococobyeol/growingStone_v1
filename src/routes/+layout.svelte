@@ -57,12 +57,14 @@
 	  }
 	});
 
-	// **추가 onMount:** 탭이 다시 활성화될 때 active_session 동기화 처리
+	// 기존에는 탭이 다시 활성화될 때 logout()을 호출했으나,
+	// 이제는 콘솔 로그 정도의 동작만 하여 세션이 유지되도록 합니다.
 	onMount(() => {
 	  const handleVisibilityChange = () => {
-		if (document.visibilityState === 'visible' && get(isPrimary)) {
-		  // 탭이 활성화될 때 active_session 업데이트 실행
-		  logout();
+		if (document.visibilityState === 'visible') {
+		  // logout() 호출이 제거되었습니다.
+		  console.log('탭이 다시 활성화되었습니다. 세션은 그대로 유지됩니다.');
+		  // 필요한 경우, session refresh나 기타 동기화 로직을 추가할 수 있습니다.
 		}
 	  };
 	  document.addEventListener('visibilitychange', handleVisibilityChange);

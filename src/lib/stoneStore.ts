@@ -6,6 +6,7 @@ export type StoneType = {
   baseSize: number;
   name: string;
   totalElapsed?: number;
+  last_updated?: string;
 };
 
 const weightedStoneTypes = [
@@ -77,5 +78,6 @@ export const currentStone = writable<StoneType>({
   type: initialType,
   baseSize: 1,
   totalElapsed: 0,
-  name: initialType
+  name: initialType,
+  last_updated: new Date().toISOString()
 });
