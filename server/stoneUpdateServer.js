@@ -10,12 +10,23 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 
+// SvelteKit에서 빌드된 HTTP 핸들러를 가져옵니다.
+// 이 예제에서는 프로젝트 루트의 build 폴더 내 handler.js 파일을 사용합니다.
+import { handler } from '../build/handler.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const app = express();
+
+// 모든 HTTP 요청을 SvelteKit 핸들러로 전달합니다.
+// 이로 인해 "/" 경로에 대한 404 오류가 발생하지 않습니다.
+app.use(handler);
+
+// 만약 추가적인 Express 미들웨어나 라우팅이 필요하다면 이곳에 작성할 수 있습니다.
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
