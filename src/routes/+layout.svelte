@@ -126,7 +126,7 @@
 	});
 
 	// 기존 onMount 블록 대신, user 값이 업데이트될 때 activeSession 업데이트를 실행
-	$: if (user && typeof localStorage !== 'undefined') {
+	$: if (user && typeof localStorage !== 'undefined' && $isPrimary) {
 	  // activeSession이 없으면 browserId를 사용하거나 새 UUID로 초기화
 	  let activeSession = localStorage.getItem('activeSession');
 	  if (!activeSession) {
