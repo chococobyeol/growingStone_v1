@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/authStore.ts, 파일명: authStore.ts
 import { writable } from 'svelte/store';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '$lib/supabaseClient';

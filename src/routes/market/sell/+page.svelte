@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/market/sell/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';

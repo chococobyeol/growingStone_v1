@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/+layout.svelte, 파일명: +layout.svelte -->
 <script lang="ts">
 	import { waitLocale } from 'svelte-i18n';
 	import { session } from '$lib/authStore';

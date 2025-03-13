@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/attendanceUtils.ts, 파일명: attendanceUtils.ts
 import { supabase } from '$lib/supabaseClient';
 
 // 출석 체크 함수

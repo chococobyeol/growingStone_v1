@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/websocketClient.ts, 파일명: websocketClient.ts
 import { writable } from 'svelte/store';
 
 export const connectionStatus = writable('connecting');

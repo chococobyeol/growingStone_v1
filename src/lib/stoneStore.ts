@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/stoneStore.ts, 파일명: stoneStore.ts
 import { writable } from 'svelte/store';
 
 export interface StoneType {

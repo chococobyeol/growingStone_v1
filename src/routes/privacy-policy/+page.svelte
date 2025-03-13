@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/privacy-policy/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { t } from 'svelte-i18n';

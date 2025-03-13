@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/settingsStore.ts, 파일명: settingsStore.ts
 import { writable } from 'svelte/store';
 
 export const showDeleteWarning = writable<boolean>(true);

@@ -1,3 +1,4 @@
+// 파일 경로: src/routes/profile/+page.ts, 파일명: +page.ts
 import { supabase } from '$lib/supabaseClient';
 import { loadUserXpData, userXpData } from '$lib/xpUtils';
 

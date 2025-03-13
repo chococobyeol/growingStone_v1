@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/login/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
     import { supabase } from '$lib/supabaseClient';
     import { goto } from '$app/navigation';

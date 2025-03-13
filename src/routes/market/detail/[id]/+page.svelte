@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/market/detail/[id]/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';

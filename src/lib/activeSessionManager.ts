@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/activeSessionManager.ts, 파일명: activeSessionManager.ts
 import { writable } from 'svelte/store';
 
 // 더 이상 active_session 기반 tab claim 기능이 필요 없으므로,

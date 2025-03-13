@@ -1,3 +1,4 @@
+// 파일 경로: src/routes/api/saveStoneState/+server.ts, 파일명: +server.ts
 import type { RequestHandler } from '@sveltejs/kit';
 import { supabase } from '$lib/supabaseClient';
 

@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
@@ -5,7 +6,7 @@
   import { currentStone, getRandomStoneType } from '$lib/stoneStore';
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
-  import type { RealtimeChannel } from '@supabase/supabase-js';
+  // supabase 리얼타임 관련 타입 및 기능은 제거합니다.
   import { updateUserXp } from '$lib/xpUtils';
   import { recordAcquiredStone } from '$lib/stoneCatalogUtils';
   import { checkAttendance } from '$lib/attendanceUtils';
@@ -322,7 +323,8 @@
   /* =====================
    * 6) onMount - 돌 성장, 타이머, 출석 체크 로직
    * ===================== */
-  let stonesSubscription: RealtimeChannel;
+  // 기존 supabase 실시간 채널 구독 코드는 웹소켓 업데이트만 사용하기 위해 제거하였습니다.
+  let stonesSubscription; // 더 이상 사용하지 않음
 
   onMount(() => {
     // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
@@ -421,36 +423,10 @@
       await flushStoneUpdates();
     });
 
-    // Supabase 실시간 채널 구독 등 기존 로직 유지
-    const stoneId = get(currentStone).id;
-    stonesSubscription = supabase
-      .channel('stone-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'stones',
-          filter: `id=eq.${stoneId}`
-        },
-        (payload: any) => {
-          const updatedStone = payload.new;
-          if (updatedStone.id === stoneId) {
-            currentStone.set({
-              id: updatedStone.id,
-              type: updatedStone.type,
-              baseSize: updatedStone.size,
-              totalElapsed: updatedStone.totalElapsed || 0,
-              name: updatedStone.name
-            });
-          }
-        }
-      )
-      .subscribe();
+    // 웹소켓 업데이트만 사용하므로 supabase 리얼타임 채널 구독은 제거되었습니다.
   
     return () => {
       cancelAnimationFrame(animationFrameId);
-      supabase.removeChannel(stonesSubscription);
     };
   });
 

@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/stoneUtils.ts, 파일명: stoneUtils.ts
 import { supabase } from '$lib/supabaseClient';
 
 export async function createStone(

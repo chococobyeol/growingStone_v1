@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/xpUtils.ts, 파일명: xpUtils.ts
 import { supabase } from '$lib/supabaseClient';
 
 export let userXpData: { level: number; nextRequiredXp: number; cumulativeXp: number }[] = [];

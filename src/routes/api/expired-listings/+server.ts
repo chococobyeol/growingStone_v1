@@ -1,3 +1,4 @@
+// 파일 경로: src/routes/api/expired-listings/+server.ts, 파일명: +server.ts
 import { json } from '@sveltejs/kit';
 import { checkExpiredListingsAdmin } from '$lib/marketUtils.server';
 

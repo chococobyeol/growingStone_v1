@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/marketUtils.ts, 파일명: marketUtils.ts
 import { supabase } from '$lib/supabaseClient';
 import { get } from 'svelte/store';
 import { t } from 'svelte-i18n';

@@ -1,3 +1,4 @@
+// 파일 경로: server/stoneUpdateServer.js, 파일명: stoneUpdateServer.js
 import dotenv from 'dotenv';
 dotenv.config();
 

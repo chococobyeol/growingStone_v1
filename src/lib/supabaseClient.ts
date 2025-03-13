@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/supabaseClient.ts, 파일명: supabaseClient.ts
 import { createClient } from '@supabase/supabase-js';
 
 // // 디버깅을 위한 환경 변수 출력

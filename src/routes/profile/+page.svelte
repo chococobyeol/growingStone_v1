@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/profile/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   export let data: {
     profileData: { xp: number; level: number } | null,

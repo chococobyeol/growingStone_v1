@@ -1,3 +1,4 @@
+// 파일 경로: src/routes/profile/+page.server.ts, 파일명: +page.server.ts
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, RequestEvent } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/supabaseAdminClient.server';

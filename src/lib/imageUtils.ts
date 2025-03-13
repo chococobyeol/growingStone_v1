@@ -1,3 +1,5 @@
+// 파일 경로: src/lib/imageUtils.ts, 파일명: imageUtils.ts
+
 // 돌 이미지 경로 생성 헬퍼 함수
 export function getStoneImagePath(stoneType: string | undefined): string {
   if (!stoneType) {

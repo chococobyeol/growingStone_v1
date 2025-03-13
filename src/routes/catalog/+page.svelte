@@ -1,3 +1,4 @@
+<!-- 파일 경로: src/routes/catalog/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';

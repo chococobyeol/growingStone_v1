@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/marketUtils.server.ts, 파일명: marketUtils.server.ts
 import { supabaseAdmin } from '$lib/supabaseAdminClient.server';
 
 export async function checkExpiredListingsAdmin() {

@@ -1,3 +1,4 @@
+// 파일 경로: src/lib/stoneCatalogUtils.ts, 파일명: stoneCatalogUtils.ts
 import { supabase } from '$lib/supabaseClient';
 
 export async function recordAcquiredStone(stoneType: string): Promise<void> {
