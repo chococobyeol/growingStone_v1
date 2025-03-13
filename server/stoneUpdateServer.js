@@ -7,6 +7,8 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import debounce from 'lodash.debounce';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,7 +22,30 @@ const wss = new WebSocketServer({ server });
 // 사용자별 최신 돌 업데이트 요청을 저장할 객체
 let updateQueue = {};
 
-// 사용자별 xp 업데이트 요청을 저장할 객체
+// 서버 시작 시 CSV 파일을 읽어서 userXpData에 저장 (레벨업 기준으로 사용)
+// CSV 파일은 예를 들어 프로젝트의 'static' 폴더에 두고 사용합니다.
+let userXpData = [];
+function loadUserXpData() {
+  const csvFilePath = path.resolve('static/userXpTable.csv'); // 경로는 실제 파일 위치에 맞게 수정하세요.
+  try {
+    const csvText = fs.readFileSync(csvFilePath, 'utf-8');
+    const lines = csvText.split('\n').filter(line => line.trim() !== '');
+    userXpData = lines.slice(1).map(line => {
+      const [levelStr, , nextRequiredXpStr, cumulativeXpStr] = line.split(',');
+      return {
+        level: parseInt(levelStr),
+        nextRequiredXp: parseInt(nextRequiredXpStr),
+        cumulativeXp: parseInt(cumulativeXpStr)
+      };
+    });
+    console.log('CSV 파일 로드 성공');
+  } catch (error) {
+    console.error('userXpTable.csv 로드 실패:', error);
+  }
+}
+loadUserXpData();
+
+// 사용자별 xp 업데이트 요청을 저장할 객체 (누적 delta 방식)
 let xpUpdateQueue = {};
 
 // stone 업데이트 처리 함수 (Debounce를 활용하여 그룹화)
@@ -78,16 +103,63 @@ async function processUpdates() {
 // xp 업데이트 처리 함수 (Debounce를 활용하여 그룹화)
 async function processXpUpdates() {
   for (const userId in xpUpdateQueue) {
-    const xpUpdate = xpUpdateQueue[userId];
-    const { xp, level } = xpUpdate;
+    const xpUpdate = xpUpdateQueue[userId]; // xpUpdate는 { delta: number } 형태임
+    console.log(`[DEBUG] processXpUpdates 시작 - userId: ${userId}, 누적 delta: ${xpUpdate.delta}`);
+
+    // DB에서 현재 프로필(xp, level) 조회
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('xp, level')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error(`[DEBUG] 프로필 조회 실패 for user ${userId}:`, profileError);
+      continue;
+    }
+
+    if (!profileData) {
+      console.error(`[DEBUG] 프로필 데이터 없음 for user ${userId}.`);
+      continue;
+    }
+
+    let currentXp = profileData.xp;
+    let currentLevel = profileData.level;
+    console.log(`[DEBUG] 조회된 프로필 - userId: ${userId}, 현재 xp: ${currentXp}, 현재 level: ${currentLevel}`);
+
+    // 누적된 delta만큼 xp 증가
+    const newXp = currentXp + xpUpdate.delta;
+    let newLevel = currentLevel;
+    console.log(`[DEBUG] 계산된 newXp: ${newXp} (현재 xp: ${currentXp} + delta: ${xpUpdate.delta})`);
+
+    // CSV 데이터를 활용하여 레벨업 체크 (userXpData가 유효한 경우)
+    if (userXpData && userXpData.length > 0) {
+      const currentLevelData = userXpData.find(item => item.level === currentLevel);
+      if (currentLevelData) {
+        console.log(`[DEBUG] 현재 레벨 데이터 - cumulativeXp for level ${currentLevel}: ${currentLevelData.cumulativeXp}`);
+        if (newXp >= currentLevelData.cumulativeXp) {
+          newLevel = currentLevel + 1;
+          console.log(`[DEBUG] 레벨업 조건 충족 - newLevel: ${newLevel}`);
+        } else {
+          console.log(`[DEBUG] 레벨업 조건 미충족 - newXp: ${newXp}, required: ${currentLevelData.cumulativeXp}`);
+        }
+      } else {
+        console.log(`[DEBUG] 레벨업 체크를 위한 현재 레벨 데이터 미발견 (level: ${currentLevel})`);
+      }
+    } else {
+      console.log(`[DEBUG] CSV userXpData 없음`);
+    }
+
+    // profiles 테이블 업데이트
     const { error } = await supabase
       .from('profiles')
-      .update({ xp, level })
+      .update({ xp: newXp, level: newLevel })
       .eq('id', userId);
+
     if (error) {
-      console.error(`XP 업데이트 실패 for user ${userId}:`, error);
+      console.error(`[DEBUG] XP 업데이트 실패 for user ${userId}:`, error);
     } else {
-      console.log(`XP 업데이트 성공 for user ${userId}`);
+      console.log(`[DEBUG] XP 업데이트 성공 for user ${userId}: 새 xp: ${newXp}, 새 level: ${newLevel}`);
     }
   }
   xpUpdateQueue = {};
@@ -103,13 +175,16 @@ wss.on('connection', (ws) => {
       const msg = JSON.parse(message.toString());
       if (msg.type === 'stoneUpdate') {
         const payload = msg.payload;
-        // stone update의 경우, 클라이언트가 반드시 last_updated 필드를 포함시켜야 합니다.
         updateQueue[payload.user_id] = payload;
         debouncedProcessUpdates();
       } else if (msg.type === 'xpUpdate') {
         const payload = msg.payload;
-        // xp 업데이트는 { userId, xp, level } 형식으로 전달됩니다.
-        xpUpdateQueue[payload.userId] = payload;
+        // 클라이언트가 이제 { userId, delta } 형태로 메시지를 전송합니다.
+        if (xpUpdateQueue[payload.userId]) {
+          xpUpdateQueue[payload.userId].delta += payload.delta;
+        } else {
+          xpUpdateQueue[payload.userId] = { delta: payload.delta };
+        }
         debouncedProcessXpUpdates();
       } else if (msg.type === 'flushUpdates') {
         console.log('플러시 요청 수신: pending 업데이트를 즉시 처리합니다.');

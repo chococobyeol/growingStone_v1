@@ -53,7 +53,7 @@ export function sendStoneUpdate(updateData: any) {
   }
 }
 
-export function sendXpUpdate(xpUpdateData: { userId: string; xp: number; level: number }) {
+export function sendXpUpdate(xpUpdateData: { userId: string; delta: number }) {
   const msg = JSON.stringify({
     type: 'xpUpdate',
     payload: xpUpdateData

@@ -29,9 +29,9 @@ export async function loadUserXpData(fetchFunction: typeof fetch = fetch) {
 let pendingXpDelta = 0;
 let xpDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
-// 매 초마다 호출하여 사용자 XP를 갱신하는 함수
+// 매 초마다 호출하여 경험치 증가량(delta)를 누적 및 전송하는 함수
 export async function updateUserXp(elapsedSeconds: number = 1) {
-  // 즉시 화면상의 XP 변화는 유지하고, DB 업데이트는 누적 후에 전송
+  // 화면상의 xp 변화는 그대로 두고, 서버에 전달할 증분(delta)만 누적
   pendingXpDelta += elapsedSeconds;
   if (xpDebounceTimeout) clearTimeout(xpDebounceTimeout);
   xpDebounceTimeout = setTimeout(async () => {
@@ -39,7 +39,7 @@ export async function updateUserXp(elapsedSeconds: number = 1) {
     pendingXpDelta = 0;
     xpDebounceTimeout = null;
 
-    // 세션 및 프로필 데이터 로드
+    // 세션 및 프로필 데이터 로드는 그대로 수행하여 사용자 ID를 가져옵니다.
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error('세션 로드 실패:', sessionError);
@@ -51,35 +51,9 @@ export async function updateUserXp(elapsedSeconds: number = 1) {
     }
     const userId = sessionData.session.user.id;
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('xp, level')
-      .eq('id', userId)
-      .maybeSingle();
-    if (profileError) {
-      console.error('프로필 로드 실패:', profileError);
-      return;
-    }
+    // 서버에는 누적 경험치 증분(delta)만 전송합니다.
+    const xpUpdateData = { userId, delta };
 
-    let currentXp = profileData?.xp || 0;
-    let currentLevel = profileData?.level || 1;
-
-    // 누적된 XP 반영
-    currentXp += delta;
-
-    // CSV 데이터 기반의 레벨업 체크
-    let newLevel = currentLevel;
-    if (userXpData && userXpData.length > 0) {
-      const currentLevelData = userXpData.find(item => item.level === currentLevel);
-      if (currentLevelData && currentXp >= currentLevelData.cumulativeXp) {
-        newLevel = currentLevel + 1;
-      }
-    }
-
-    // 웹소켓으로 전송할 xp 업데이트 데이터 구성
-    const xpUpdateData = { userId, xp: currentXp, level: newLevel };
-
-    // 웹소켓을 통해 경험치 업데이트 메시지 전송
     sendXpUpdate(xpUpdateData);
   }, 500); // 500ms 디바운스 시간 (필요에 따라 조정)
 }
