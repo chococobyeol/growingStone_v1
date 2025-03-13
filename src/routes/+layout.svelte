@@ -12,6 +12,7 @@
 	import { goto } from '$app/navigation';
 	import { isPrimary, myId } from '$lib/activeSessionManager';
 	import { get } from 'svelte/store';
+	import { sendActiveSessionUpdate } from '$lib/websocketClient';
   
 	let localeReady = false;
 	waitLocale().then(() => {
@@ -35,13 +36,16 @@
 	let browserId: string = "";
   
 	async function logout() {
+	  console.log("forceLogout 이벤트에 의해 logout() 호출됨");
 	  const { error } = await supabase.auth.signOut();
 	  if (error && error.message !== 'Auth session missing!') {
 		console.error("로그아웃 실패:", error.message);
 		return;
 	  }
 	  session.set(null);
+	  localStorage.removeItem('activeSession');
 	  goto('/');
+	  // location.reload(); // 필요한 경우 강제 새로고침
 	}
   
 	// 페이지 로드시 및 일정 주기로 active_session을 업데이트합니다.
@@ -99,6 +103,43 @@
 	    bc.close();
 	  };
 	});
+
+	// forceLogout 이벤트 처리: 다른 기기에서 로그인 시 이 이벤트가 발생합니다.
+	onMount(() => {
+	  const handleForceLogout = (event: Event) => {
+		const customEvent = event as CustomEvent;
+		console.log("forceLogout 메시지 수신:", customEvent.detail);
+		// 로그인 상태가 아니라면 forceLogout 이벤트 처리 무시
+		if (!user) {
+		  console.log("로그인 상태가 아니므로 forceLogout 이벤트를 무시합니다.");
+		  return;
+		}
+		alert("다른 기기에서 로그인되어 로그아웃됩니다.");
+		logout();
+	  };
+
+	  // 현재 경로가 로그인, 회원가입 페이지인 경우 이벤트 리스너 등록하지 않음
+	  if (!['/login', '/register'].includes(window.location.pathname)) {
+		window.addEventListener("forceLogout", handleForceLogout);
+	  }
+	  return () => window.removeEventListener("forceLogout", handleForceLogout);
+	});
+
+	// 기존 onMount 블록 대신, user 값이 업데이트될 때 activeSession 업데이트를 실행
+	$: if (user && typeof localStorage !== 'undefined') {
+	  // activeSession이 없으면 browserId를 사용하거나 새 UUID로 초기화
+	  let activeSession = localStorage.getItem('activeSession');
+	  if (!activeSession) {
+		activeSession = browserId || crypto.randomUUID();
+		localStorage.setItem('activeSession', activeSession);
+		console.log("activeSession 초기화:", activeSession);
+	  }
+	  console.log("전송 전 로그: activeSession 존재", { userId: user.id, activeSession });
+	  sendActiveSessionUpdate({ userId: user.id, activeSession });
+	  console.log("WS activeSession 업데이트 전송:", user.id, activeSession);
+	} else {
+	  console.log("로그인 상태가 아니거나, localStorage를 사용할 수 없습니다.");
+	}
 </script>
 
 {#if localeReady}

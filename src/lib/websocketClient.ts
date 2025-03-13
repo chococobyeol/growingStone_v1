@@ -22,6 +22,21 @@ if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
     console.log('WebSocket 연결 성공');
   });
 
+  socket.addEventListener('message', (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      console.log("WS 메시지 수신:", msg);
+      if (msg.type === 'forceLogout') {
+        console.log("forceLogout 메시지 감지됨. payload:", msg.payload);
+        // forceLogout 메시지 수신 시 window 이벤트 디스패치
+        window.dispatchEvent(new CustomEvent('forceLogout', { detail: msg.payload }));
+      }
+      // 기존 stoneUpdate, xpUpdate, flushUpdates 메시지 처리 로직은 그대로 유지
+    } catch (error) {
+      console.error("WS 메시지 처리 중 오류 발생:", error);
+    }
+  });
+
   socket.addEventListener('error', (error) => {
     connectionStatus.set('error');
     console.error('WebSocket 에러:', error);
@@ -69,6 +84,18 @@ export function sendXpUpdate(xpUpdateData: { userId: string; delta: number }) {
     }
   } else {
     console.warn('WebSocket이 초기화되지 않았습니다.');
+  }
+}
+
+export function sendActiveSessionUpdate(payload: { userId: string; activeSession: string }): void {
+  const msg = JSON.stringify({
+    type: 'activeSessionUpdate',
+    payload
+  });
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(msg);
+  } else {
+    messageQueue.push(msg);
   }
 }
 

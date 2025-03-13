@@ -13,6 +13,7 @@
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import { isPrimary } from '$lib/activeSessionManager';
   import { sendStoneUpdate, flushStoneUpdates, clearLocalMessageQueue } from '$lib/websocketClient';
+  import { session } from '$lib/authStore';
 
   /* =====================
    * 1) 돌 정보 & 성장 로직
@@ -520,14 +521,31 @@
 
   // 예시: 로그아웃 시 직접 DB 업데이트 후, 로컬 pending 메시지 삭제
   async function logout() {
+    console.log("로그아웃 시작: 현재 세션 상태", await supabase.auth.getSession());
+    // DB 업데이트 및 pending 메시지 삭제를 먼저 수행
     await immediateStoneUpdate();
     clearLocalMessageQueue();
+
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('로그아웃 실패:', error);
-    } else {
-      goto('/login');
+      if (error.message === 'Auth session missing!') {
+        console.warn("로그아웃 시 이미 세션이 만료되었습니다.");
+      } else {
+        console.error("로그아웃 실패:", error.message);
+        return;
+      }
     }
+    // 로그아웃 후 세션 상태 확인
+    const { data: sessionAfter } = await supabase.auth.getSession();
+    console.log("로그아웃 후 세션 상태", sessionAfter);
+
+    // 세션 스토어와 localStorage 초기화
+    session.set(null);
+    localStorage.removeItem('activeSession');
+
+    // 강제 페이지 새로고침을 통해 캐시를 확실히 비움 (필요 시 주석 해제)
+    goto('/login');
+    // location.reload();
   }
 
   // 페이지 이동 전에도 즉시 DB 업데이트를 수행하도록 수정 (flushStoneUpdates 대신)

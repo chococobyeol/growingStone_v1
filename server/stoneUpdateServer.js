@@ -170,7 +170,7 @@ const debouncedProcessUpdates = debounce(processUpdates, 1000);
 const debouncedProcessXpUpdates = debounce(processXpUpdates, 1000);
 
 wss.on('connection', (ws) => {
-  ws.on('message', (message) => {
+  ws.on('message', async (message) => {
     try {
       const msg = JSON.parse(message.toString());
       if (msg.type === 'stoneUpdate') {
@@ -179,20 +179,57 @@ wss.on('connection', (ws) => {
         debouncedProcessUpdates();
       } else if (msg.type === 'xpUpdate') {
         const payload = msg.payload;
-        // 클라이언트가 이제 { userId, delta } 형태로 메시지를 전송합니다.
         if (xpUpdateQueue[payload.userId]) {
           xpUpdateQueue[payload.userId].delta += payload.delta;
         } else {
           xpUpdateQueue[payload.userId] = { delta: payload.delta };
         }
         debouncedProcessXpUpdates();
+      } else if (msg.type === 'activeSessionUpdate') {
+        const { userId, activeSession } = msg.payload;
+        // 현재 연결(ws)에 userId 정보를 할당
+        ws.userId = userId;
+
+        console.log(`[DEBUG] activeSessionUpdate 수신 - userId: ${userId}, activeSession: ${activeSession}`);
+        
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('active_session')
+          .eq('id', userId)
+          .single();
+        
+        if (error || !profileData) {
+          console.error(`[DEBUG] 프로필 데이터 조회 실패 for user ${userId}:`, error);
+        } else {
+          const storedSession = profileData.active_session;
+          console.log(`[DEBUG] DB에서 가져온 active_session: ${storedSession}, 새 activeSession: ${activeSession}`);
+          if (storedSession && storedSession !== activeSession) {
+            console.log(`[DEBUG] active_session 충돌 발생: 기존 ${storedSession} vs 새 ${activeSession}. forceLogout 메시지 전송 시도합니다.`);
+            wss.clients.forEach((client) => {
+              console.log(`[DEBUG] 클라이언트 체크: client.userId=${client.userId} (대상 userId: ${userId})`);
+              if (client !== ws && client.userId === userId) {
+                client.send(JSON.stringify({ type: 'forceLogout', payload: { reason: '다른 기기에서 로그인' } }));
+                console.log(`[DEBUG] forceLogout 메시지 전송 완료: 대상 클라이언트 userId=${client.userId}`);
+              }
+            });
+          }
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ active_session: activeSession })
+            .eq('id', userId);
+          if (updateError) {
+            console.error(`[DEBUG] DB 업데이트 실패:`, updateError);
+          } else {
+            console.log(`[DEBUG] DB active_session 업데이트 성공: ${activeSession}`);
+          }
+        }
       } else if (msg.type === 'flushUpdates') {
         console.log('플러시 요청 수신: pending 업데이트를 즉시 처리합니다.');
         debouncedProcessUpdates.flush();
         debouncedProcessXpUpdates.flush();
       }
-    } catch (error) {
-      console.error('메시지 처리 실패:', error);
+    } catch (err) {
+      console.error("메시지 처리 중 예외 발생:", err);
     }
   });
 });
