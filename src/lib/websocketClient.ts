@@ -53,6 +53,25 @@ export function sendStoneUpdate(updateData: any) {
   }
 }
 
+export function sendXpUpdate(xpUpdateData: { userId: string; xp: number; level: number }) {
+  const msg = JSON.stringify({
+    type: 'xpUpdate',
+    payload: xpUpdateData
+  });
+
+  if (socket) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(msg);
+    } else if (socket.readyState === WebSocket.CONNECTING) {
+      messageQueue.push(msg);
+    } else {
+      console.warn('WebSocket 연결이 아직 연결되지 않았거나 SSR 환경입니다.');
+    }
+  } else {
+    console.warn('WebSocket이 초기화되지 않았습니다.');
+  }
+}
+
 export function flushStoneUpdates(): Promise<void> {
   return new Promise((resolve) => {
     const msg = JSON.stringify({ type: 'flushUpdates' });

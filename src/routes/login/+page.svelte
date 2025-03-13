@@ -18,7 +18,12 @@
       if (error) {
         errorMsg = error.message;
       } else {
-        // 로그인 성공 후 별도 active_session 처리는 제거하고 바로 화면 이동합니다.
+        // 로그인 성공 시 이전 세션의 로컬 스토리지 데이터 제거
+        localStorage.removeItem('skipLoadUserStone');
+        localStorage.removeItem('stoneCreationLock');
+        localStorage.removeItem('stoneCreationInProgress');
+  
+        // 이후 메인 페이지로 이동
         goto('/');
       }
     }
@@ -32,6 +37,11 @@
       });
       if (error) {
         console.error(error.message);
+      } else {
+        // 디스코드 로그인 성공 시에도 관련 로컬 스토리지 데이터를 제거합니다.
+        localStorage.removeItem('skipLoadUserStone');
+        localStorage.removeItem('stoneCreationLock');
+        localStorage.removeItem('stoneCreationInProgress');
       }
     }
   </script>

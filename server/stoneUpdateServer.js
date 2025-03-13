@@ -17,10 +17,13 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// 사용자별 최신 업데이트 요청을 저장할 객체
+// 사용자별 최신 돌 업데이트 요청을 저장할 객체
 let updateQueue = {};
 
-// DB 업데이트 처리 함수 (Debounce를 활용하여 그룹화하여 처리)
+// 사용자별 xp 업데이트 요청을 저장할 객체
+let xpUpdateQueue = {};
+
+// stone 업데이트 처리 함수 (Debounce를 활용하여 그룹화)
 async function processUpdates() {
   for (const userId in updateQueue) {
     const stoneUpdate = updateQueue[userId];
@@ -72,8 +75,27 @@ async function processUpdates() {
   updateQueue = {};
 }
 
-// Debounce 시간 1000ms(1초)로 설정하여 짧은 시간 내의 요청을 그룹화
+// xp 업데이트 처리 함수 (Debounce를 활용하여 그룹화)
+async function processXpUpdates() {
+  for (const userId in xpUpdateQueue) {
+    const xpUpdate = xpUpdateQueue[userId];
+    const { xp, level } = xpUpdate;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ xp, level })
+      .eq('id', userId);
+    if (error) {
+      console.error(`XP 업데이트 실패 for user ${userId}:`, error);
+    } else {
+      console.log(`XP 업데이트 성공 for user ${userId}`);
+    }
+  }
+  xpUpdateQueue = {};
+}
+
+// Debounce 시간 1000ms(1초)로 설정하여 요청들을 그룹화합니다.
 const debouncedProcessUpdates = debounce(processUpdates, 1000);
+const debouncedProcessXpUpdates = debounce(processXpUpdates, 1000);
 
 wss.on('connection', (ws) => {
   ws.on('message', (message) => {
@@ -81,12 +103,18 @@ wss.on('connection', (ws) => {
       const msg = JSON.parse(message.toString());
       if (msg.type === 'stoneUpdate') {
         const payload = msg.payload;
-        // 클라이언트가 반드시 last_updated 필드를 포함시켜야 합니다.
+        // stone update의 경우, 클라이언트가 반드시 last_updated 필드를 포함시켜야 합니다.
         updateQueue[payload.user_id] = payload;
         debouncedProcessUpdates();
+      } else if (msg.type === 'xpUpdate') {
+        const payload = msg.payload;
+        // xp 업데이트는 { userId, xp, level } 형식으로 전달됩니다.
+        xpUpdateQueue[payload.userId] = payload;
+        debouncedProcessXpUpdates();
       } else if (msg.type === 'flushUpdates') {
         console.log('플러시 요청 수신: pending 업데이트를 즉시 처리합니다.');
         debouncedProcessUpdates.flush();
+        debouncedProcessXpUpdates.flush();
       }
     } catch (error) {
       console.error('메시지 처리 실패:', error);
