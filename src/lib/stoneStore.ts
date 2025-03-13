@@ -7,6 +7,7 @@ export interface StoneType {
   baseSize: number;
   name: string;
   totalElapsed?: number;
+  discovered_at?: string;
   last_updated?: string;
   manualEdit?: boolean;
 }

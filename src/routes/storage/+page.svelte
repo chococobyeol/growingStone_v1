@@ -196,52 +196,25 @@
   }
 
   async function swapStone(stone: Stone) {
-    if (stone.market_listings && stone.market_listings.length > 0 && 
-        stone.market_listings.some(listing => listing.status === 'active')) {
-      errorMsg = $t('marketStoneLoadError');
-      return;
-    }
-    
     try {
-      const current = get(currentStone);
-      const updateForCurrent = {
-        type: stone.type,
-        size: stone.size,
-        name: stone.name,
-        totalElapsed: stone.totalElapsed || 0,
-        discovered_at: new Date().toISOString()
-      };
-      const updateForStored = {
-        type: current.type,
-        size: current.baseSize,
-        name: current.name,
-        totalElapsed: current.totalElapsed || 0,
-        discovered_at: new Date().toISOString()
-      };
-
-      const { error: errorCurrent } = await supabase
-        .from('stones')
-        .update(updateForCurrent)
-        .eq('id', current.id);
-      if (errorCurrent) {
-        throw new Error(errorCurrent.message);
+      // 새로운 스왑 로직: 프로필(current_stone_id)을 업데이트하여,
+      // 선택된 보관함 돌(stone)을 현재 돌로 설정합니다.
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session?.user) {
+        errorMsg = $t('loginRequired');
+        return;
+      }
+      const userId = sessionData.session.user.id;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ current_stone_id: stone.id })
+        .eq('id', userId);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      const { error: errorStored } = await supabase
-        .from('stones')
-        .update(updateForStored)
-        .eq('id', stone.id);
-      if (errorStored) {
-        throw new Error(errorStored.message);
-      }
-
-      currentStone.set({
-        id: stone.id,
-        type: stone.type,
-        baseSize: stone.size,
-        totalElapsed: stone.totalElapsed || 0,
-        name: stone.name
-      });
+      // 현재 돌 정보를 재로딩하여 UI에 반영합니다.
+      await loadCurrentStone();
       await loadStoredStones();
       goto('/');
     } catch (error) {

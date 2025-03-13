@@ -152,8 +152,22 @@
 
   async function drawStoneAndSetCurrent() {
     const lockKey = 'stoneCreationLock';
+    const pendingKey = 'stoneCreationInProgress';
+
+    // 이미 돌 생성이 진행 중이라면 pendingKey 체크
+    if (localStorage.getItem(pendingKey)) {
+      console.log('돌 생성 작업이 이미 진행 중입니다. 대기 후 재시도');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기 후
+      return loadUserStone();
+    }
+
+    // pending 플래그 설정 (진행 중임을 표기)
+    localStorage.setItem(pendingKey, 'true');
+  
+    console.log('drawStoneAndSetCurrent 실행');
     // 이미 돌 생성 중이면, 돌 정보를 다시 불러오도록 대기합니다.
     if (localStorage.getItem(lockKey)) {
+      console.log('락 대기 중');
       // 락이 해제될 때까지 100ms 간격으로 체크
       await new Promise(resolve => {
         const checkLock = setInterval(() => {
@@ -167,19 +181,22 @@
     }
     // 돌 생성 시작 전 락 설정
     localStorage.setItem(lockKey, 'true');
-
+    console.log('락 설정');
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error("세션 로드 실패:", sessionError);
       localStorage.removeItem(lockKey);
+      localStorage.removeItem(pendingKey);
       return;
     }
     if (!sessionData?.session?.user) {
       console.error("로그인된 사용자가 없습니다.");
       localStorage.removeItem(lockKey);
+      localStorage.removeItem(pendingKey);
       return;
     }
     const userId = sessionData.session.user.id;
+    
     const randomType = getRandomStoneType();
     const newStone = {
       id: crypto.randomUUID(),
@@ -190,10 +207,13 @@
       user_id: userId,
       totalElapsed: 0
     };
+    console.log('newStone 생성');
     const { data, error } = await supabase.from('stones').insert(newStone).select();
+    
     if (error) {
       console.error("돌 뽑기 실패:", error);
       localStorage.removeItem(lockKey);
+      localStorage.removeItem(pendingKey);
     } else if (data && data.length > 0) {
       const createdStone = data[0];
       currentStone.set({
@@ -205,8 +225,9 @@
         last_updated: createdStone.last_updated || new Date().toISOString()
       });
       computedSize = createdStone.size;
-      
+      console.log('currentStone 설정');
       // 프로필 업데이트: 새로 생성된 돌의 id를 current_stone_id에 저장
+      console.log('프로필 업데이트 시작');
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ current_stone_id: createdStone.id })
@@ -217,6 +238,7 @@
       
       await recordAcquiredStone(createdStone.type);
       localStorage.removeItem(lockKey);
+      localStorage.removeItem(pendingKey);
     }
   }
 
@@ -327,6 +349,10 @@
   let stonesSubscription; // 더 이상 사용하지 않음
 
   onMount(() => {
+    // 페이지 진입 시, 이전에 남아 있을 수 있는 stoneCreationLock를 제거합니다.
+    localStorage.removeItem('stoneCreationLock');
+    console.log('페이지 로드 시 stoneCreationLock 초기화 완료');
+  
     // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
       await loadUserStone();
