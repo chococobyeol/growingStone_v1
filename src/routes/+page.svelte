@@ -352,6 +352,8 @@
   onMount(() => {
     // 페이지 진입 시, 이전에 남아 있을 수 있는 stoneCreationLock를 제거합니다.
     localStorage.removeItem('stoneCreationLock');
+    localStorage.removeItem('stoneCreationInProgress');
+    localStorage.removeItem('skipLoadUserStone');
     console.log('페이지 로드 시 stoneCreationLock 초기화 완료');
   
     // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
