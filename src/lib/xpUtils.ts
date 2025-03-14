@@ -28,18 +28,29 @@ export async function loadUserXpData(fetchFunction: typeof fetch = fetch) {
 // 누적 xp 변화량과 디바운스 타이머
 let pendingXpDelta = 0;
 let xpDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+let lastXpUpdateTime = Date.now();
 
-// 매 초마다 호출하여 경험치 증가량(delta)를 누적 및 전송하는 함수
-export async function updateUserXp(elapsedSeconds: number = 1) {
-  // 화면상의 xp 변화는 그대로 두고, 서버에 전달할 증분(delta)만 누적
-  pendingXpDelta += elapsedSeconds;
+// externalDelta를 선택적 인자로 받아, 제공되면 그 값을 사용하고, 없으면 내부 계산을 사용합니다.
+export async function updateUserXp(externalDelta?: number) {
+  const now = Date.now();
+  let delta: number;
+  if (typeof externalDelta === 'number') {
+    // 외부에서 계산한 경과 시간을 사용 (예: updateLoop에서 전달된 elapsedSeconds)
+    delta = externalDelta;
+  } else {
+    // 인자가 없으면, 마지막 호출 이후 경과한 시간을 계산합니다.
+    delta = (now - lastXpUpdateTime) / 1000;
+  }
+  lastXpUpdateTime = now;
+  pendingXpDelta += delta;
+
   if (xpDebounceTimeout) clearTimeout(xpDebounceTimeout);
   xpDebounceTimeout = setTimeout(async () => {
-    const delta = pendingXpDelta;
+    const totalDelta = pendingXpDelta;
     pendingXpDelta = 0;
     xpDebounceTimeout = null;
 
-    // 세션 및 프로필 데이터 로드는 그대로 수행하여 사용자 ID를 가져옵니다.
+    // 세션 및 프로필 데이터 로드를 통해 사용자 ID를 가져옵니다.
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error('세션 로드 실패:', sessionError);
@@ -51,9 +62,8 @@ export async function updateUserXp(elapsedSeconds: number = 1) {
     }
     const userId = sessionData.session.user.id;
 
-    // 서버에는 누적 경험치 증분(delta)만 전송합니다.
-    const xpUpdateData = { userId, delta };
-
+    // 누적된 xp 증분(totalDelta)을 서버로 전송합니다.
+    const xpUpdateData = { userId, delta: totalDelta };
     sendXpUpdate(xpUpdateData);
   }, 500); // 500ms 디바운스 시간 (필요에 따라 조정)
 }
