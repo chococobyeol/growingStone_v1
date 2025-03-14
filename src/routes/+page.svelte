@@ -355,10 +355,9 @@
     localStorage.removeItem('stoneCreationInProgress');
     localStorage.removeItem('skipLoadUserStone');
     console.log('페이지 로드 시 stoneCreationLock 초기화 완료');
-  
+    loadUserStone();
     // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
-      await loadUserStone();
       (async () => {
         const attendanceRes = await checkAttendance();
         if (attendanceRes.message) {
@@ -423,7 +422,7 @@
           updateRemainingTime(countdown);
         }
   
-        lastUpdateTime += elapsedSeconds * 1000;
+        lastUpdateTime = currentTime;
       }
   
       // pendingDraws가 있을 경우 순차적으로 돌 뽑기 실행
