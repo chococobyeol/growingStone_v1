@@ -99,10 +99,10 @@
    * 3) 로그인 사용자의 저장된 돌 불러오기
    * ===================== */
   async function loadUserStone() {
-    if (localStorage.getItem('skipLoadUserStone')) {
-      localStorage.removeItem('skipLoadUserStone');
-      return;
-    }
+    // if (localStorage.getItem('skipLoadUserStone')) {
+    //   localStorage.removeItem('skipLoadUserStone');
+    //   return;
+    // }
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error("세션 로드 실패:", sessionError);
@@ -353,10 +353,9 @@
     // 페이지 진입 시, 이전에 남아 있을 수 있는 stoneCreationLock를 제거합니다.
     localStorage.removeItem('stoneCreationLock');
     localStorage.removeItem('stoneCreationInProgress');
-    localStorage.removeItem('skipLoadUserStone');
     console.log('페이지 로드 시 stoneCreationLock 초기화 완료');
     loadUserStone();
-    // 기존 비동기 초기화 작업 호출 (loadUserStone, checkAttendance, loadBalance, loadRemainingTime 등)
+    // 기존 비동기 초기화 작업 호출 (checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
       (async () => {
         const attendanceRes = await checkAttendance();

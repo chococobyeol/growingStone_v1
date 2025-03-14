@@ -19,7 +19,6 @@
         errorMsg = error.message;
       } else {
         // 로그인 성공 시 이전 세션의 로컬 스토리지 데이터 제거
-        localStorage.removeItem('skipLoadUserStone');
         localStorage.removeItem('stoneCreationLock');
         localStorage.removeItem('stoneCreationInProgress');
   
@@ -39,7 +38,6 @@
         console.error(error.message);
       } else {
         // 디스코드 로그인 성공 시에도 관련 로컬 스토리지 데이터를 제거합니다.
-        localStorage.removeItem('skipLoadUserStone');
         localStorage.removeItem('stoneCreationLock');
         localStorage.removeItem('stoneCreationInProgress');
       }
