@@ -7,10 +7,16 @@ const SOCKET_URL = import.meta.env.VITE_WS_ENDPOINT || 'ws://localhost:4000';
 let socket: WebSocket | null = null;
 let messageQueue: string[] = [];
 
-if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
+// 재연결 관련 변수
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 10;
+const baseReconnectDelay = 2000; // 2초
+
+function connect() {
   socket = new WebSocket(SOCKET_URL);
 
   socket.addEventListener('open', () => {
+    reconnectAttempts = 0; // 연결 성공 시 재연결 시도 횟수 초기화
     connectionStatus.set('open');
     // 큐에 저장된 메시지들을 모두 전송
     while (messageQueue.length) {
@@ -45,7 +51,26 @@ if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
   socket.addEventListener('close', () => {
     connectionStatus.set('closed');
     console.log('WebSocket 연결 종료');
+    attemptReconnect();
   });
+}
+
+function attemptReconnect() {
+  if (reconnectAttempts < maxReconnectAttempts) {
+    reconnectAttempts++;
+    const delay = baseReconnectDelay * reconnectAttempts; // 지수적으로 증가하는 딜레이 (간단한 방식)
+    console.log(`WebSocket 재연결 시도 ${reconnectAttempts}번째, ${delay}ms 후 시도`);
+    setTimeout(() => {
+      connect();
+    }, delay);
+  } else {
+    console.error("최대 재연결 시도 횟수를 초과했습니다. 재연결 중단.");
+  }
+}
+
+// 최초 연결 호출
+if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
+  connect();
 }
 
 export function sendStoneUpdate(updateData: any) {
