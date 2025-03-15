@@ -14,6 +14,43 @@
   import { sendStoneUpdate, sendXpUpdate, clearLocalMessageQueue } from '$lib/websocketClient';
   import { session } from '$lib/authStore';
 
+  // 페이지의 load 함수로부터 전달받은 data 객체 (프로필 및 CSV 데이터)
+  export let data: {
+    profileData: { xp: number; level: number } | null,
+    userXpData: { level: number; nextRequiredXp: number; cumulativeXp: number }[]
+  };
+
+  // 초기 xp와 레벨 (프로필에서 받아온 값이 없으면 기본값 사용)
+  let userXp: number = data.profileData ? data.profileData.xp : 0;
+  let userLevel: number = data.profileData ? data.profileData.level : 1;
+
+  // CSV에 담긴 누적 xp 데이터를 활용하여 현재 xp에 따른 레벨을 계산하는 함수
+  function calculateLevel(
+    xp: number,
+    xpData: { level: number; nextRequiredXp: number; cumulativeXp: number }[]
+  ): { level: number, requiredXp: number } {
+    // 레벨 순서대로 정렬 (이미 정렬되어 있다면 생략 가능)
+    const sortedData = [...xpData].sort((a, b) => a.level - b.level);
+    let calculatedLevel = sortedData[0].level;
+    let baseXp = 0;
+    let requiredXp = sortedData[0].cumulativeXp;
+    for (let i = 0; i < sortedData.length; i++) {
+      if (i > 0) {
+        baseXp = sortedData[i - 1].cumulativeXp;
+      }
+      if (xp < sortedData[i].cumulativeXp) {
+        calculatedLevel = sortedData[i].level;
+        requiredXp = sortedData[i].cumulativeXp - baseXp;
+        break;
+      }
+      if (i === sortedData.length - 1) {
+        calculatedLevel = sortedData[i].level;
+        requiredXp = sortedData[i].cumulativeXp - baseXp;
+      }
+    }
+    return { level: calculatedLevel, requiredXp };
+  }
+
   /* =====================
    * 1) 돌 정보 & 성장 로직
    * ===================== */
@@ -279,8 +316,24 @@
       return;
     }
     const userId = currentSession.user.id;
-    const xpUpdateData = { userId, delta: elapsedSeconds };
-    sendXpUpdate(xpUpdateData);
+    // xp는 경과 초만큼 증가
+    userXp += elapsedSeconds;
+    
+    // CSV 데이터(userXpData)를 활용해 xp 기반 레벨 계산
+    if (data.userXpData && data.userXpData.length > 0) {
+      const calcResult = calculateLevel(userXp, data.userXpData);
+      userLevel = calcResult.level;
+    }
+    
+    // sendXpUpdate 함수는 기존 delta를 사용하는 타입으로 선언되어 있을 수 있으므로,
+    // 새로운 구조의 update 데이터를 전달할 때 any 캐스팅을 사용합니다.
+    sendXpUpdate({ 
+      userId, 
+      xp: userXp, 
+      level: userLevel, 
+      last_updated: new Date().toISOString() 
+    } as any);
+    console.log("websocket에 xp 업데이트 요청 전송:", { userId, xp: userXp, level: userLevel });
   }
 
   /* =====================
@@ -365,6 +418,7 @@
     localStorage.removeItem('stoneCreationInProgress');
     console.log('페이지 로드 시 stoneCreationLock 초기화 완료');
     loadUserStone();
+    loadUserXpData();
     // 기존 비동기 초기화 작업 호출 (checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
       (async () => {
@@ -536,7 +590,7 @@
     }
   }
 
-  // 즉각 XP 업데이트 함수 추가
+  // 즉각 XP 업데이트 함수 (페이지 이동 등 시 호출)
   async function immediateXpUpdate() {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
@@ -548,12 +602,23 @@
       return;
     }
     const userId = sessionData.session.user.id;
-    // XP 업데이트는 보통 updateLoop에서 autoUpdateUserXp를 통해 처리됨
-    // 페이지 이동 전에 혹시 남아 있을 수 있는 XP 업데이트 요청을
-    // flush하기 위해 delta 0을 전송해 서버 측에서 처리를 유도합니다.
-    const xpUpdateData = { userId, delta: 0 };
-    sendXpUpdate(xpUpdateData);
-    console.log("즉각 XP 업데이트 요청 전송");
+    const xpUpdateData = {
+      userId,
+      xp: userXp,
+      level: userLevel,
+      last_updated: new Date().toISOString()
+    };
+    // 최신 XP 및 레벨 정보를 서버에 전송하여 업데이트 플러시
+    console.log("즉각 XP 업데이트 요청 전송:", xpUpdateData);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ xp: userXp, level: userLevel })
+      .eq('id', userId);
+    if (error) {
+      console.error("즉각 XP 업데이트 실패:", error);
+    } else {
+      console.log("즉각 XP 업데이트 성공");
+    }
   }
 
   // 페이지 이동 전, 돌 업데이트와 XP 업데이트를 모두 진행하고 메시지 큐를 비웁니다.
@@ -699,6 +764,35 @@
       await new Promise(resolve => setTimeout(resolve, interval));
     }
     console.warn('DB 업데이트 확인 타임아웃');
+  }
+
+  // XP 데이터를 불러오는 함수: loadUserStone()과 유사한 구조로 작성합니다.
+  async function loadUserXpData() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션 로드 실패 (xp):", sessionError);
+      return;
+    }
+    if (!sessionData?.session?.user) {
+      console.error("로그인된 사용자가 없습니다. (xp)");
+      return;
+    }
+    const userId = sessionData.session.user.id;
+
+    // 프로필 테이블에서 xp, level (및 필요에 따라 last_updated) 컬럼을 조회합니다.
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('xp, level, last_updated')
+      .eq('id', userId)
+      .single();
+    if (profileError || !profile) {
+      console.error("프로필 조회 실패 (xp):", profileError);
+      return;
+    }
+    // 불러온 데이터를 전역 변수에 할당
+    userXp = profile.xp;
+    userLevel = profile.level;
+    console.log("XP 데이터 로드 완료:", { userXp, userLevel });
   }
 </script>
 
