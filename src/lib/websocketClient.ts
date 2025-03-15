@@ -124,36 +124,37 @@ export function sendActiveSessionUpdate(payload: { userId: string; activeSession
   }
 }
 
-export function flushStoneUpdates(): Promise<void> {
-  return new Promise((resolve) => {
-    const msg = JSON.stringify({ type: 'flushUpdates' });
-    if (socket) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(msg);
-        // pending 메시지 큐를 즉시 비웁니다.
-        messageQueue = [];
-        // 서버에서 업데이트를 즉시 처리할 시간을 주기 위해 약간의 지연 후 resolve합니다.
-        setTimeout(resolve, 500);
-      } else if (socket.readyState === WebSocket.CONNECTING) {
-        messageQueue.push(msg);
-        socket.addEventListener(
-          'open',
-          () => {
-            messageQueue = [];
-            setTimeout(resolve, 500);
-          },
-          { once: true }
-        );
-      } else {
-        console.warn('WebSocket 연결이 아직 연결되지 않았거나 SSR 환경입니다.');
-        resolve();
-      }
-    } else {
-      console.warn('WebSocket이 초기화되지 않았습니다.');
-      resolve();
-    }
-  });
-}
+// flushStoneUpdates 함수는 더 이상 사용되지 않습니다.
+// export function flushStoneUpdates(): Promise<void> {
+//   return new Promise((resolve) => {
+//     const msg = JSON.stringify({ type: 'flushUpdates' });
+//     if (socket) {
+//       if (socket.readyState === WebSocket.OPEN) {
+//         socket.send(msg);
+//         // pending 메시지 큐를 즉시 비웁니다.
+//         messageQueue = [];
+//         // 서버에서 업데이트를 즉시 처리할 시간을 주기 위해 약간의 지연 후 resolve합니다.
+//         setTimeout(resolve, 500);
+//       } else if (socket.readyState === WebSocket.CONNECTING) {
+//         messageQueue.push(msg);
+//         socket.addEventListener(
+//           'open',
+//           () => {
+//             messageQueue = [];
+//             setTimeout(resolve, 500);
+//           },
+//           { once: true }
+//         );
+//       } else {
+//         console.warn('WebSocket 연결이 아직 연결되지 않았거나 SSR 환경입니다.');
+//         resolve();
+//       }
+//     } else {
+//       console.warn('WebSocket이 초기화되지 않았습니다.');
+//       resolve();
+//     }
+//   });
+// }
 
 // 추가: 현재 클라이언트의 pending 메시지 큐만 클리어하는 함수
 export function clearLocalMessageQueue() {

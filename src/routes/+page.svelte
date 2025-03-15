@@ -11,7 +11,7 @@
   import { checkAttendance } from '$lib/attendanceUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import { isPrimary } from '$lib/activeSessionManager';
-  import { sendStoneUpdate, sendXpUpdate, flushStoneUpdates, clearLocalMessageQueue } from '$lib/websocketClient';
+  import { sendStoneUpdate, sendXpUpdate, clearLocalMessageQueue } from '$lib/websocketClient';
   import { session } from '$lib/authStore';
 
   /* =====================
@@ -235,8 +235,9 @@
       if (profileError) {
         console.error("프로필 업데이트 실패:", profileError);
       }
-      
+      // 돌 획득 기록 추가
       await recordAcquiredStone(createdStone.type);
+      // 락 해제
       localStorage.removeItem(lockKey);
       localStorage.removeItem(pendingKey);
     }
@@ -455,8 +456,15 @@
   
     // SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
     beforeNavigate(async () => {
-      await autoUpdateStone();
-      await flushStoneUpdates();
+      console.log("페이지 이동 전 최종 업데이트 시작");
+      // 즉각 업데이트를 통해 현재 상태를 직접 DB에 저장
+      await immediateStoneUpdate();
+      await immediateXpUpdate();
+      // // 동시에 기존에 쌓인 업데이트(웹소켓용)를 플러시 처리
+      // await flushStoneUpdates();
+      // 메시지 큐도 비워줍니다.
+      clearLocalMessageQueue();
+      console.log("페이지 이동 전 최종 업데이트 완료");
     });
 
     // 웹소켓 업데이트만 사용하므로 supabase 리얼타임 채널 구독은 제거되었습니다.
