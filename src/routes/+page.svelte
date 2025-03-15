@@ -510,15 +510,13 @@
   
     // SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
     beforeNavigate(async () => {
-      console.log("페이지 이동 전 최종 업데이트 시작");
-      // 즉각 업데이트를 통해 현재 상태를 직접 DB에 저장
+      // 페이지 이동 전에 updateLoop를 중단하고
+      cancelAnimationFrame(animationFrameId);
+      // 즉각 업데이트를 실행하여 최종적으로 저장
       await immediateStoneUpdate();
       await immediateXpUpdate();
-      // // 동시에 기존에 쌓인 업데이트(웹소켓용)를 플러시 처리
-      // await flushStoneUpdates();
-      // 메시지 큐도 비워줍니다.
       clearLocalMessageQueue();
-      console.log("페이지 이동 전 최종 업데이트 완료");
+      console.log("페이지 이동 전 즉각 업데이트 완료");
     });
 
     // 웹소켓 업데이트만 사용하므로 supabase 리얼타임 채널 구독은 제거되었습니다.
@@ -1026,6 +1024,10 @@
     position: relative;
     z-index: 1;
   }
+  /* xp-hidden 클래스를 적용하면 해당 요소의 투명도가 0이 되어 보이지 않습니다 */
+  .xp-hidden {
+    opacity: 0;
+  }
 </style>
 
 <div
@@ -1072,6 +1074,8 @@
       <p>{$t('typeLabel')}: {$t('stoneTypes.' + $currentStone.type)}</p>
       <p>{$t('totalGrowthTimeLabel')}: {$currentStone.totalElapsed || 0}s</p>
       <p>{$t('nextStoneInLabel')}: {formatTime(countdown)}</p>
+      <!-- XP 요소에 xp-hidden 클래스를 추가하여 투명하게 합니다 -->
+      <p class="xp-hidden">XP: {userXp}</p>
     </div>
   </div>
   {#if showMenu}
