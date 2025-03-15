@@ -25,7 +25,9 @@ export async function loadUserXpData(fetchFunction: typeof fetch = fetch) {
   }
 }
 
-// 누적 xp 변화량과 디바운스 타이머
+/*
+// 아래 코드는 더 이상 사용하지 않는 누적 xp 변화량 및 디바운스 로직입니다.
+
 let pendingXpDelta = 0;
 let xpDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 let lastXpUpdateTime = Date.now();
@@ -67,3 +69,4 @@ export async function updateUserXp(externalDelta?: number) {
     sendXpUpdate(xpUpdateData);
   }, 500); // 500ms 디바운스 시간 (필요에 따라 조정)
 }
+*/

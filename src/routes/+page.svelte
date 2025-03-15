@@ -7,12 +7,11 @@
   import { get } from 'svelte/store';
   import { t } from 'svelte-i18n';
   // supabase 리얼타임 관련 타입 및 기능은 제거합니다.
-  import { updateUserXp } from '$lib/xpUtils';
   import { recordAcquiredStone } from '$lib/stoneCatalogUtils';
   import { checkAttendance } from '$lib/attendanceUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import { isPrimary } from '$lib/activeSessionManager';
-  import { sendStoneUpdate, flushStoneUpdates, clearLocalMessageQueue } from '$lib/websocketClient';
+  import { sendStoneUpdate, sendXpUpdate, flushStoneUpdates, clearLocalMessageQueue } from '$lib/websocketClient';
   import { session } from '$lib/authStore';
 
   /* =====================
@@ -247,16 +246,12 @@
    * 4) 돌 성장 및 자동 저장 로직
    * ===================== */
   async function autoUpdateStone() {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      console.error("세션 가져오기 실패:", sessionError);
-      return;
-    }
-    if (!sessionData?.session?.user) {
+    const currentSession = get(session);
+    if (!currentSession || !currentSession.user) {
       console.error("로그인된 사용자가 없습니다.");
       return;
     }
-    const userId = sessionData.session.user.id;
+    const userId = currentSession.user.id;
     const stone = get(currentStone);
     const updateData: any = {
       id: stone.id,
@@ -274,7 +269,21 @@
   }
 
   /* =====================
-   * 5) 타이머 관련 DB 연동 함수 (profiles.remaining_time 사용)
+   * 5) 경험치(xp) 업데이트 함수 (돌 업데이트와 동일한 구조)
+   * ===================== */
+  async function autoUpdateUserXp(elapsedSeconds: number) {
+    const currentSession = get(session);
+    if (!currentSession || !currentSession.user) {
+      console.error("로그인된 사용자가 없습니다.");
+      return;
+    }
+    const userId = currentSession.user.id;
+    const xpUpdateData = { userId, delta: elapsedSeconds };
+    sendXpUpdate(xpUpdateData);
+  }
+
+  /* =====================
+   * 6) 타이머 관련 DB 연동 함수 (profiles.remaining_time 사용)
    * ===================== */
   async function loadRemainingTime(): Promise<number | null> {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -344,7 +353,7 @@
   }
 
   /* =====================
-   * 6) onMount - 돌 성장, 타이머, 출석 체크 로직
+   * 7) onMount - 돌 성장, 타이머, 출석 체크 로직
    * ===================== */
   // 기존 supabase 실시간 채널 구독 코드는 웹소켓 업데이트만 사용하기 위해 제거하였습니다.
   let stonesSubscription; // 더 이상 사용하지 않음
@@ -405,7 +414,7 @@
         });
   
         autoUpdateStone();
-        updateUserXp(elapsedSeconds);
+        autoUpdateUserXp(elapsedSeconds);
   
         // 타이머 업데이트 및 돌 뽑기 로직 개선
         if (elapsedSeconds < countdown) {
@@ -487,7 +496,7 @@
   }
   */
 
-  // 즉시 DB 업데이트 함수 (WS를 사용하지 않고 직접 supabase API를 호출)
+  // 즉각 DB 업데이트 함수 (WS를 사용하지 않고 직접 supabase API를 호출)
   async function immediateStoneUpdate() {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
@@ -519,6 +528,35 @@
     }
   }
 
+  // 즉각 XP 업데이트 함수 추가
+  async function immediateXpUpdate() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error("세션 가져오기 실패 (xp 업데이트):", sessionError);
+      return;
+    }
+    if (!sessionData?.session?.user) {
+      console.error("로그인된 사용자가 없습니다. (xp 업데이트)");
+      return;
+    }
+    const userId = sessionData.session.user.id;
+    // XP 업데이트는 보통 updateLoop에서 autoUpdateUserXp를 통해 처리됨
+    // 페이지 이동 전에 혹시 남아 있을 수 있는 XP 업데이트 요청을
+    // flush하기 위해 delta 0을 전송해 서버 측에서 처리를 유도합니다.
+    const xpUpdateData = { userId, delta: 0 };
+    sendXpUpdate(xpUpdateData);
+    console.log("즉각 XP 업데이트 요청 전송");
+  }
+
+  // 페이지 이동 전, 돌 업데이트와 XP 업데이트를 모두 진행하고 메시지 큐를 비웁니다.
+  beforeNavigate(async () => {
+    console.log("페이지 이동 전 즉각 업데이트 시작");
+    await immediateStoneUpdate();
+    await immediateXpUpdate();
+    clearLocalMessageQueue();
+    console.log("페이지 이동 전 즉각 업데이트 완료");
+  });
+
   // 예시: 로그아웃 시 직접 DB 업데이트 후, 로컬 pending 메시지 삭제
   async function logout() {
     console.log("로그아웃 시작: 현재 세션 상태", await supabase.auth.getSession());
@@ -547,12 +585,6 @@
     goto('/login');
     // location.reload();
   }
-
-  // 페이지 이동 전에도 즉시 DB 업데이트를 수행하도록 수정 (flushStoneUpdates 대신)
-  beforeNavigate(async () => {
-    await immediateStoneUpdate();
-    clearLocalMessageQueue();
-  });
 
   async function saveStone() {
     // 더 이상 사용하지 않을 저장 기능
