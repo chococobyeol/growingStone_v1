@@ -11,7 +11,7 @@
   import { checkAttendance } from '$lib/attendanceUtils';
   import { getStoneImagePath, getDefaultImagePath } from '$lib/imageUtils';
   import { isPrimary } from '$lib/activeSessionManager';
-  import { sendStoneUpdate, sendXpUpdate, clearLocalMessageQueue } from '$lib/websocketClient';
+  import { sendStoneUpdate, sendXpUpdate, clearLocalMessageQueue, flushUpdates } from '$lib/websocketClient';
   import { session } from '$lib/authStore';
 
   // 페이지의 load 함수로부터 전달받은 data 객체 (프로필 및 CSV 데이터)
@@ -508,19 +508,6 @@
   
     animationFrameId = requestAnimationFrame(updateLoop);
   
-    // SPA 내에서 페이지 이동 시에도 최종 저장을 진행 (비동기 저장)
-    beforeNavigate(async () => {
-      // 페이지 이동 전에 updateLoop를 중단하고
-      cancelAnimationFrame(animationFrameId);
-      // 즉각 업데이트를 실행하여 최종적으로 저장
-      await immediateStoneUpdate();
-      await immediateXpUpdate();
-      clearLocalMessageQueue();
-      console.log("페이지 이동 전 즉각 업데이트 완료");
-    });
-
-    // 웹소켓 업데이트만 사용하므로 supabase 리얼타임 채널 구독은 제거되었습니다.
-  
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
@@ -622,6 +609,8 @@
   // 페이지 이동 전, 돌 업데이트와 XP 업데이트를 모두 진행하고 메시지 큐를 비웁니다.
   beforeNavigate(async () => {
     console.log("페이지 이동 전 즉각 업데이트 시작");
+    flushUpdates();
+
     await immediateStoneUpdate();
     await immediateXpUpdate();
     clearLocalMessageQueue();
@@ -631,8 +620,10 @@
   // 예시: 로그아웃 시 직접 DB 업데이트 후, 로컬 pending 메시지 삭제
   async function logout() {
     console.log("로그아웃 시작: 현재 세션 상태", await supabase.auth.getSession());
+    flushUpdates();
     // DB 업데이트 및 pending 메시지 삭제를 먼저 수행
     await immediateStoneUpdate();
+    await immediateXpUpdate();
     clearLocalMessageQueue();
 
     const { error } = await supabase.auth.signOut();
@@ -739,30 +730,30 @@
     imgElement.onerror = null; // 무한 루프 방지
   }
 
-  // DB 업데이트가 반영되었는지 확인하기 위해 폴링하는 함수
-  async function waitForDBUpdate(stoneId: string, expectedTimestamp: string, timeout = 5000, interval = 500): Promise<void> {
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeout) {
-      const { data, error } = await supabase
-        .from('stones')
-        .select('last_updated')
-        .eq('id', stoneId)
-        .single();
+  // // DB 업데이트가 반영되었는지 확인하기 위해 폴링하는 함수
+  // async function waitForDBUpdate(stoneId: string, expectedTimestamp: string, timeout = 5000, interval = 500): Promise<void> {
+  //   const startTime = Date.now();
+  //   while (Date.now() - startTime < timeout) {
+  //     const { data, error } = await supabase
+  //       .from('stones')
+  //       .select('last_updated')
+  //       .eq('id', stoneId)
+  //       .single();
 
-      if (error) {
-        console.error('DB 폴링 실패:', error);
-      } else if (data) {
-        const dbTimestamp = new Date(data.last_updated).getTime();
-        const expected = new Date(expectedTimestamp).getTime();
-        if (dbTimestamp >= expected) {
-          // 예상한 업데이트가 반영됨
-          return;
-        }
-      }
-      await new Promise(resolve => setTimeout(resolve, interval));
-    }
-    console.warn('DB 업데이트 확인 타임아웃');
-  }
+  //     if (error) {
+  //       console.error('DB 폴링 실패:', error);
+  //     } else if (data) {
+  //       const dbTimestamp = new Date(data.last_updated).getTime();
+  //       const expected = new Date(expectedTimestamp).getTime();
+  //       if (dbTimestamp >= expected) {
+  //         // 예상한 업데이트가 반영됨
+  //         return;
+  //       }
+  //     }
+  //     await new Promise(resolve => setTimeout(resolve, interval));
+  //   }
+  //   console.warn('DB 업데이트 확인 타임아웃');
+  // }
 
   // XP 데이터를 불러오는 함수: loadUserStone()과 유사한 구조로 작성합니다.
   async function loadUserXpData() {

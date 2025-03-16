@@ -87,7 +87,7 @@ async function processUpdates() {
     const updateObject = {
       id: stoneUpdate.id,
       type: stoneUpdate.type,
-      size: stoneUpdate.baseSize,
+      size: stoneUpdate.size,
       totalElapsed: stoneUpdate.totalElapsed || 0,
       name: stoneUpdate.name,
       user_id: userId,
@@ -218,14 +218,21 @@ wss.on('connection', (ws) => {
         }
       } else if (msg.type === 'flushUpdates') {
         console.log('플러시 요청 수신: pending 업데이트를 즉각 처리합니다.');
-        debouncedProcessUpdates.flush();
-        debouncedProcessXpUpdates.flush();
+        await flushAllUpdates();
       }
     } catch (err) {
       console.error("메시지 처리 중 예외 발생:", err);
     }
   });
 });
+
+// 두 debounced 함수의 flush를 동기화(Curently 동시에 실행)할 수 있도록 flushAllUpdates 함수를 추가합니다.
+async function flushAllUpdates() {
+  await Promise.all([
+    debouncedProcessUpdates.flush(),
+    debouncedProcessXpUpdates.flush()
+  ]);
+}
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
