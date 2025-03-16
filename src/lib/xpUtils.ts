@@ -11,8 +11,8 @@ export async function loadUserXpData(fetchFunction: typeof fetch = fetch) {
     const response = await fetchFunction('/userXpTable.csv');
     const csvText = await response.text();
     const lines = csvText.split('\n').filter(line => line.trim() !== '');
-    // 첫 줄(header)은 건너뛰고 데이터만 파싱
-    userXpData = lines.slice(1).map(line => {
+    // 첫 줄을 건너뛰지 않고 모든 데이터를 파싱합니다.
+    userXpData = lines.map(line => {
       const [levelStr, , nextRequiredXpStr, cumulativeXpStr] = line.split(',');
       return {
         level: parseInt(levelStr),

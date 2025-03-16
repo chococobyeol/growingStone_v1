@@ -13,16 +13,17 @@
   import { isPrimary } from '$lib/activeSessionManager';
   import { sendStoneUpdate, sendXpUpdate, clearLocalMessageQueue, flushUpdates } from '$lib/websocketClient';
   import { session } from '$lib/authStore';
+  import { loadUserXpData, userXpData } from '$lib/xpUtils';
 
-  // 페이지의 load 함수로부터 전달받은 data 객체 (프로필 및 CSV 데이터)
-  export let data: {
-    profileData: { xp: number; level: number } | null,
-    userXpData: { level: number; nextRequiredXp: number; cumulativeXp: number }[]
-  };
+  // // 페이지의 load 함수로부터 전달받은 data 객체 (프로필 및 CSV 데이터)
+  // export let data: {
+  //   profileData: { xp: number; level: number } | null,
+  //   userXpData: { level: number; nextRequiredXp: number; cumulativeXp: number }[]
+  // };
 
   // 초기 xp와 레벨 (프로필에서 받아온 값이 없으면 기본값 사용)
-  let userXp: number = data.profileData ? data.profileData.xp : 0;
-  let userLevel: number = data.profileData ? data.profileData.level : 1;
+  let userXp: number = 0;
+  let userLevel: number = 1;
 
   // CSV에 담긴 누적 xp 데이터를 활용하여 현재 xp에 따른 레벨을 계산하는 함수
   function calculateLevel(
@@ -320,8 +321,9 @@
     userXp += elapsedSeconds;
     
     // CSV 데이터(userXpData)를 활용해 xp 기반 레벨 계산
-    if (data.userXpData && data.userXpData.length > 0) {
-      const calcResult = calculateLevel(userXp, data.userXpData);
+    console.log('[DEBUG] 전역 userXpData:', userXpData);
+    if (userXpData && userXpData.length > 0) {
+      const calcResult = calculateLevel(userXp, userXpData);
       userLevel = calcResult.level;
     }
     
@@ -418,7 +420,7 @@
     localStorage.removeItem('stoneCreationInProgress');
     console.log('페이지 로드 시 stoneCreationLock 초기화 완료');
     loadUserStone();
-    loadUserXpData();
+    loadNowUserXpData();
     // 기존 비동기 초기화 작업 호출 (checkAttendance, loadBalance, loadRemainingTime 등)
     (async () => {
       (async () => {
@@ -757,7 +759,7 @@
   // }
 
   // XP 데이터를 불러오는 함수: loadUserStone()과 유사한 구조로 작성합니다.
-  async function loadUserXpData() {
+  async function loadNowUserXpData() {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
       console.error("세션 로드 실패 (xp):", sessionError);
