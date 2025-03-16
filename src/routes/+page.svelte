@@ -606,13 +606,14 @@
     }
   }
 
+  // 메인 페이지에서 수파베이스 업데이트를 하지 않도록 주석처리
   // 페이지 이동 전, 돌 업데이트와 XP 업데이트를 모두 진행하고 메시지 큐를 비웁니다.
   beforeNavigate(async () => {
     console.log("페이지 이동 전 즉각 업데이트 시작");
     flushUpdates();
 
-    await immediateStoneUpdate();
-    await immediateXpUpdate();
+    // await immediateStoneUpdate();
+    // await immediateXpUpdate();
     clearLocalMessageQueue();
     console.log("페이지 이동 전 즉각 업데이트 완료");
   });
@@ -622,8 +623,8 @@
     console.log("로그아웃 시작: 현재 세션 상태", await supabase.auth.getSession());
     flushUpdates();
     // DB 업데이트 및 pending 메시지 삭제를 먼저 수행
-    await immediateStoneUpdate();
-    await immediateXpUpdate();
+    // await immediateStoneUpdate();
+    // await immediateXpUpdate();
     clearLocalMessageQueue();
 
     const { error } = await supabase.auth.signOut();
