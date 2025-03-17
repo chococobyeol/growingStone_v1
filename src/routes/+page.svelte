@@ -624,9 +624,6 @@
   async function logout() {
     console.log("로그아웃 시작: 현재 세션 상태", await supabase.auth.getSession());
     flushUpdates();
-    // DB 업데이트 및 pending 메시지 삭제를 먼저 수행
-    // await immediateStoneUpdate();
-    // await immediateXpUpdate();
     clearLocalMessageQueue();
 
     const { error } = await supabase.auth.signOut();
@@ -638,17 +635,22 @@
         return;
       }
     }
+
     // 로그아웃 후 세션 상태 확인
     const { data: sessionAfter } = await supabase.auth.getSession();
     console.log("로그아웃 후 세션 상태", sessionAfter);
 
-    // 세션 스토어와 localStorage 초기화
+    // 세션 스토어 및 activeSession 삭제
     session.set(null);
     localStorage.removeItem('activeSession');
 
-    // 강제 페이지 새로고침을 통해 캐시를 확실히 비움 (필요 시 주석 해제)
-    goto('/login');
-    // location.reload();
+    // Supabase가 사용하는 인증 토큰이 남아 있을 수 있으므로 삭제
+    localStorage.removeItem('supabase.auth.token');
+
+    // 페이지 전체를 새로 고침하여 캐시된 세션이나 상태를 완전히 초기화
+    // (혹은 로그인 페이지로 강제 이동)
+    location.href = '/login';
+    // 또는 location.reload();
   }
 
   async function saveStone() {
