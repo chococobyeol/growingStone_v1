@@ -1,2 +1,29 @@
-@import 'tailwindcss';
-@plugin '@tailwindcss/typography';
+@font-face {
+  font-family: 'MaplestoryOTF';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFLight.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'MaplestoryOTF';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFBold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 글로벌 폰트 적용 */
+body {
+  font-family: 'MaplestoryOTF', sans-serif;
+}
+
+button,
+.btn {
+  font-family: 'MaplestoryOTF', sans-serif;
+}
+
+
