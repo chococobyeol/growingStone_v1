@@ -1,7 +1,7 @@
 <!-- 파일 경로: src/routes/profile/+page.svelte, 파일명: +page.svelte -->
 <script lang="ts">
   export let data: {
-    profileData: { xp: number; level: number } | null,
+    profileData: { xp: number; level: number; nickname: string; user_code: string } | null,
     userXpData: { level: number; nextRequiredXp: number; cumulativeXp: number }[]
   };
 
@@ -20,6 +20,9 @@
   let baseXp = 0;
   let levelRequirement = 0;
   let currentXpProgress = 0;
+
+  // 로컬 변수로 닉네임을 관리 (초기값은 서버에서 전달받은 닉네임)
+  let nickname = data.profileData ? data.profileData.nickname : '';
 
   type UserXpEntry = {
     level: number;
@@ -170,10 +173,42 @@
       showPasswordModal = false;
     }
   }
+
+  // 닉네임 수정 함수: 더블클릭 시 prompt 창을 띄워 새로운 닉네임을 입력 받습니다.
+  async function editNickname() {
+    const newNickname = prompt($t('changeNicknamePrompt') || '새로운 닉네임을 입력하세요', nickname);
+    if (newNickname && newNickname.trim() !== '' && newNickname.trim() !== nickname) {
+      if (newNickname.trim().length > 200) {
+        alert($t('nicknameMaxLength')||'닉네임은 최대 200자 이내로 입력해주세요.');
+        return;
+      }
+      const sessionResponse = await supabase.auth.getSession();
+      const userId = sessionResponse.data?.session?.user?.id;
+      if (!userId) {
+        console.error("사용자 정보가 없습니다.");
+        return;
+      }
+      const { error } = await supabase
+        .from('profiles')
+        .update({ nickname: newNickname.trim() })
+        .eq('id', userId);
+      if (error) {
+        console.error("닉네임 업데이트 실패:", error);
+      } else {
+        nickname = newNickname.trim();
+      }
+    }
+  }
 </script>
 
 <div class="profile-container">
   <h1>{$t('profile')}</h1>
+  {#if data.profileData}
+    <!-- 닉네임 부분을 더블클릭하면 수정할 수 있도록 on:dblclick 이벤트를 추가 -->
+    <p on:dblclick={editNickname}>{nickname}</p>
+    <!-- 고유 코드(user_code)를 닉네임 바로 아래 투명도 0으로 표시 -->
+    <p class="user-code" style="opacity: 0;">{data.profileData.user_code}</p>
+  {/if}
   <p>{$t('level')}: {userLevel}</p>
   
   <div class="xp-bar-container">
@@ -445,5 +480,10 @@
     color: green;
     text-align: center;
     margin-top: 1rem;
+  }
+
+  .user-code {
+    /* 투명도 0으로 설정되어 화면에 보이지 않지만 DOM에 남아 있음 */
+    opacity: 0;
   }
 </style>

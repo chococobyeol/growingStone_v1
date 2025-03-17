@@ -15,7 +15,7 @@ export const load: PageLoad = async (event) => {
     const userId = sessionData.session.user.id;
     const { data, error } = await supabase
       .from('profiles')
-      .select('xp, level')
+      .select('xp, level, nickname, user_code')
       .eq('id', userId)
       .maybeSingle();
 

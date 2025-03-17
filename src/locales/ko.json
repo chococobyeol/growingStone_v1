@@ -289,5 +289,7 @@
   "noStonesAcquired": "획득한 돌이 없습니다.",
   "acquisitionProbability": "현재 획득 확률",
   "notice": "공지사항",
-  "noNotices": "등록된 공지사항이 없습니다."
+  "noNotices": "등록된 공지사항이 없습니다.",
+  "changeNicknamePrompt": "새로운 닉네임을 입력하세요",
+  "nicknameMaxLength": "닉네임은 최대 200자 이내로 입력해주세요."
 }

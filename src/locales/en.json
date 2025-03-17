@@ -290,5 +290,7 @@
   "noStonesAcquired": "No stones acquired",
   "acquisitionProbability": "Current Acquisition Probability",
   "notice": "Notice",
-  "noNotices": "No notices"
+  "noNotices": "No notices",
+  "changeNicknamePrompt": "Enter a new nickname",
+  "nicknameMaxLength": "Nickname must be less than 200 characters"
 }
