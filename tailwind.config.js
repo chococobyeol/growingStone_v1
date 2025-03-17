@@ -6,7 +6,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['IM_Hyemin', 'sans-serif']
+        sans: ['GangwonEdu', 'sans-serif']
       },
       typography: {
         DEFAULT: {
