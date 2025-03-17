@@ -1,13 +1,13 @@
 @font-face {
-  font-family: 'MaplestoryOTF';
-  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFLight.woff') format('woff');
-  font-weight: 300;
+  font-family: 'IM_Hyemin';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/IM_Hyemin-Regular.woff2') format('woff2');
+  font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'MaplestoryOTF';
-  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFBold.woff') format('woff');
+  font-family: 'IM_Hyemin';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/IM_Hyemin-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
 }
@@ -18,12 +18,11 @@
 
 /* 글로벌 폰트 적용 */
 body {
-  font-family: 'MaplestoryOTF', sans-serif;
+  font-family: 'IM_Hyemin', sans-serif;
 }
 
+/* 버튼 등에도 글로벌 폰트를 강제 적용 */
 button,
 .btn {
-  font-family: 'MaplestoryOTF', sans-serif;
+  font-family: 'IM_Hyemin', sans-serif;
 }
-
-

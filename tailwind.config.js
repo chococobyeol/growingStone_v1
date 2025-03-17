@@ -6,7 +6,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['MaplestoryOTF', 'sans-serif']
+        sans: ['IM_Hyemin', 'sans-serif']
       },
       typography: {
         DEFAULT: {
