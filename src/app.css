@@ -1,15 +1,15 @@
 @font-face {
-    font-family: 'GangwonEdu';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFLightA.woff') format('woff');
-    font-weight: 300;
-    font-style: normal;
+  font-family: 'IM_Hyemin-Regular';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/IM_Hyemin-Regular.woff2') format('woff');
+  font-weight: 400;
+  font-style: normal;
 }
 
 @font-face {
-    font-family: 'GangwonEdu';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFBoldA.woff') format('woff');
-    font-weight: 700;
-    font-style: normal;
+  font-family: 'IM_Hyemin-Bold';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/IM_Hyemin-Bold.woff2') format('woff');
+  font-weight: 700;
+  font-style: normal;
 }
 
 @tailwind base;
@@ -18,11 +18,17 @@
 
 /* 글로벌 폰트 적용 */
 body {
-  font-family: 'GangwonEdu', sans-serif;
+  font-family: 'IM_Hyemin-Regular', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* 버튼 등에도 글로벌 폰트를 강제 적용 */
 button,
 .btn {
-  font-family: 'GangwonEdu', sans-serif;
+  font-family: 'IM_Hyemin-Regular', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
