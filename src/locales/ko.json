@@ -291,5 +291,21 @@
   "notice": "공지사항",
   "noNotices": "등록된 공지사항이 없습니다.",
   "changeNicknamePrompt": "새로운 닉네임을 입력하세요",
-  "nicknameMaxLength": "닉네임은 최대 200자 이내로 입력해주세요."
+  "nicknameMaxLength": "닉네임은 최대 200자 이내로 입력해주세요.",
+  "ranking": {
+    "pageTitle": "랭킹",
+    "userRankingTab": "유저 랭킹",
+    "stoneRankingTab": "돌 랭킹",
+    "userRankingTitle": "유저 랭킹 (경험치 기준)",
+    "stoneRankingTitle": "돌 랭킹",
+    "integratedStoneRanking": "전체 돌 랭킹",
+    "stoneRankingByType": "돌 타입별 랭킹",
+    "position": "순위",
+    "nickname": "닉네임",
+    "levelProgress": "레벨 (경험치 %)",
+    "stoneName": "돌 이름",
+    "stoneType": "돌 타입",
+    "stoneSize": "돌 크기",
+    "selectStoneType": "돌 타입 선택"
+  }
 }

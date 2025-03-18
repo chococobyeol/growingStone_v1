@@ -1104,6 +1104,9 @@
         </div>
       </div>
       <div class="menu-group help-group">
+        <button class="btn icon-btn" on:click={() => goto('/ranking')}>
+          <img src="/assets/icons/ranking.png" alt="랭킹" />
+        </button>
         <button class="btn icon-btn" title="{$t('share')}" aria-label="{$t('share')}" on:click={handleShare}>
           <img src="/assets/icons/share.png" alt="{$t('share')}" />
         </button>

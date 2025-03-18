@@ -292,5 +292,19 @@
   "notice": "Notice",
   "noNotices": "No notices",
   "changeNicknamePrompt": "Enter a new nickname",
-  "nicknameMaxLength": "Nickname must be less than 200 characters"
+  "nicknameMaxLength": "Nickname must be less than 200 characters",
+  "ranking": {
+    "pageTitle": "Ranking",
+    "userRankingTab": "User Ranking",
+    "stoneRankingTab": "Stone Ranking",
+    "userRankingTitle": "User Ranking (by XP)",
+    "stoneRankingTitle": "Stone Ranking",
+    "integratedStoneRanking": "Integrated Stone Ranking",
+    "stoneRankingByType": "Stone Ranking by Type",
+    "position": "Position",
+    "nickname": "Nickname",
+    "levelProgress": "Level (XP %)",
+    "stoneName": "Stone Name",
+    "selectStoneType": "Select Stone Type"
+  }
 }
