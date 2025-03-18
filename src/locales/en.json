@@ -305,6 +305,8 @@
     "nickname": "Nickname",
     "levelProgress": "Level (XP %)",
     "stoneName": "Stone Name",
+    "stoneType": "Stone Type",
+    "stoneSize": "Stone Size",
     "selectStoneType": "Select Stone Type"
   }
 }
