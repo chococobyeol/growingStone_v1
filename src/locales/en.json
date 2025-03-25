@@ -131,7 +131,17 @@
     "hematite": "Hematite",
     "magnetite": "Magnetite",
     "malachite": "Malachite",
-    "sphalerite": "Sphalerite"
+    "sphalerite": "Sphalerite",
+    "amethyst": "Amethyst",
+    "emerald": "Emerald",
+    "ruby": "Ruby",
+    "topaz": "Topaz",
+    "chalk": "Chalk",
+    "serpentinite": "Serpentinite",
+    "lapislazuli": "Lapis Lazuli",
+    "dacite": "Dacite",
+    "trachyte": "Trachyte",
+    "phyllite": "Phyllite"
   },
   "acquiredCount": "Acquired Count",
   "createdAt": "First Discovery",
@@ -198,7 +208,17 @@
     "hematite": "Hematite is a primary iron ore mineral, characterized by its distinct reddish tint and robust, durable nature. It is a key resource in iron production.",
     "magnetite": "Magnetite is an iron oxide mineral known for its strong magnetic properties, typically appearing black and highly valued as an iron ore.",
     "malachite": "Malachite is a copper-bearing mineral famed for its striking green banded patterns. It is widely used as a decorative stone and as a copper ore.",
-    "sphalerite": "Sphalerite is the primary ore of zinc, distinguished by its unique yellow to brown appearance. It plays an essential role in zinc production."
+    "sphalerite": "Sphalerite is the primary ore of zinc, distinguished by its unique yellow to brown appearance. It plays an essential role in zinc production.",
+    "amethyst": "Amethyst is a type of quartz that exhibits a purple hue, renowned for its elegant purple luster and durability, and is primarily used in jewelry or decorative items.",
+    "emerald": "Emerald is a gemstone known for its vivid green color, distinguished by its deep, vibrant hues and exceptional durability, making it highly esteemed.",
+    "ruby": "Ruby is celebrated for its intense red color and superior durability, making it a precious mineral cherished over long periods.",
+    "topaz": "Topaz typically displays a golden or blue tone, characterized by its hard structure and sparkling luster, which makes it a prized gemstone.",
+    "chalk": "Chalk is a form of limestone noted for its pure white color and soft texture, sometimes containing fine fossils.",
+    "serpentinite": "Serpentinite is a metamorphic rock formed from precursor rocks that have undergone serpentinization, usually displaying a greenish or yellowish-brown color with a smooth, slippery surface.",
+    "lapislazuli": "Lapis Lazuli is a precious gemstone renowned for its brilliant blue color, having been used for jewelry and ceremonial purposes for thousands of years.",
+    "dacite": "Dacite is an intermediate volcanic rock with a moderate silica content that typically exhibits a gray or pinkish hue, formed by the rapid cooling of lava after an eruption.",
+    "trachyte": "Trachyte is a volcanic rock with a low silica content, characterized by a dense crystal structure and a unique color tone, formed in connection with volcanic activity.",
+    "phyllite": "Phyllite is a metamorphic rock derived from shale or slate under moderate metamorphic conditions, marked by finely aligned mineral grains that impart a subtle sheen."  
   },
   "attendance": {
     "sessionError": "Failed to retrieve user session.",
